@@ -1,4 +1,4 @@
-Fri Aug 16 01:27:48 2024       
+Fri Aug 16 01:25:17 2024       
 +-----------------------------------------------------------------------------------------+
 | NVIDIA-SMI 550.54.15              Driver Version: 550.54.15      CUDA Version: 12.4     |
 |-----------------------------------------+------------------------+----------------------+
@@ -6,8 +6,8 @@ Fri Aug 16 01:27:48 2024
 | Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
 |                                         |                        |               MIG M. |
 |=========================================+========================+======================|
-|   0  NVIDIA GeForce RTX 4090        On  |   00000000:00:0A.0 Off |                  Off |
-| 30%   36C    P8             21W /  450W |       1MiB /  24564MiB |      0%      Default |
+|   0  NVIDIA GeForce RTX 4090        On  |   00000000:00:0B.0 Off |                  Off |
+| 30%   35C    P8             19W /  450W |       1MiB /  24564MiB |      0%      Default |
 |                                         |                        |                  N/A |
 +-----------------------------------------+------------------------+----------------------+
                                                                                          
@@ -20,7 +20,7 @@ Fri Aug 16 01:27:48 2024
 +-----------------------------------------------------------------------------------------+
 /cluster/customapps/biomed/vogtlab/abizeul/software/anaconda/envs/reconstruction/lib/python3.12/site-packages/torch/utils/data/dataloader.py:557: UserWarning: This DataLoader will create 16 worker processes in total. Our suggested max number of worker in current system is 8, which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
   warnings.warn(_create_warning_msg(
-Sum of mask tensor(3145728., device='cuda:0')
+Sum of mask tensor(0., device='cuda:0')
 Started eval
 /cluster/customapps/biomed/vogtlab/abizeul/software/anaconda/envs/reconstruction/lib/python3.12/site-packages/torch/utils/data/dataloader.py:557: UserWarning:
 
@@ -40,16 +40,16 @@ The epoch parameter in `scheduler.step()` was not necessary and is being depreca
 ---- Eval Epoch 80/100
 ---- Eval Epoch 90/100
 ---- Eval Epoch 100/100
----- Epoch 9/600 in 250.57s with 0.1 loss
----- Epoch 19/600 in 190.48s with 0.09 loss
----- Epoch 29/600 in 228.83s with 0.09 loss
----- Epoch 39/600 in 202.02s with 0.09 loss
----- Epoch 49/600 in 277.79s with 0.09 loss
----- Epoch 59/600 in 241.94s with 0.09 loss
----- Epoch 69/600 in 231.85s with 0.09 loss
----- Epoch 79/600 in 216.49s with 0.09 loss
----- Epoch 89/600 in 210.31s with 0.09 loss
----- Epoch 99/600 in 205.76s with 0.09 loss
+---- Epoch 9/600 in 227.17s with 0.0 loss
+---- Epoch 19/600 in 211.94s with 0.0 loss
+---- Epoch 29/600 in 201.06s with 0.0 loss
+---- Epoch 39/600 in 237.67s with 0.0 loss
+---- Epoch 49/600 in 206.07s with 0.0 loss
+---- Epoch 59/600 in 266.66s with 0.0 loss
+---- Epoch 69/600 in 183.37s with 0.0 loss
+---- Epoch 79/600 in 258.4s with 0.0 loss
+---- Epoch 89/600 in 361.72s with 0.0 loss
+---- Epoch 99/600 in 125.59s with 0.0 loss
 Started eval
 ---- Eval Epoch 10/100
 ---- Eval Epoch 20/100
@@ -61,16 +61,16 @@ Started eval
 ---- Eval Epoch 80/100
 ---- Eval Epoch 90/100
 ---- Eval Epoch 100/100
----- Epoch 109/600 in 236.29s with 0.09 loss
----- Epoch 119/600 in 179.5s with 0.09 loss
----- Epoch 129/600 in 251.83s with 0.09 loss
----- Epoch 139/600 in 197.38s with 0.09 loss
----- Epoch 149/600 in 194.27s with 0.09 loss
----- Epoch 159/600 in 225.18s with 0.09 loss
----- Epoch 169/600 in 235.3s with 0.09 loss
----- Epoch 179/600 in 209.81s with 0.09 loss
----- Epoch 189/600 in 234.13s with 0.09 loss
----- Epoch 199/600 in 201.21s with 0.09 loss
+---- Epoch 109/600 in 250.48s with 0.0 loss
+---- Epoch 119/600 in 234.72s with 0.0 loss
+---- Epoch 129/600 in 321.99s with 0.0 loss
+---- Epoch 139/600 in 264.46s with 0.0 loss
+---- Epoch 149/600 in 283.03s with 0.0 loss
+---- Epoch 159/600 in 466.44s with 0.0 loss
+---- Epoch 169/600 in 237.73s with 0.0 loss
+---- Epoch 179/600 in 154.99s with 0.0 loss
+---- Epoch 189/600 in 173.75s with 0.0 loss
+---- Epoch 199/600 in 206.3s with 0.0 loss
 Started eval
 ---- Eval Epoch 10/100
 ---- Eval Epoch 20/100
@@ -82,7 +82,5 @@ Started eval
 ---- Eval Epoch 80/100
 ---- Eval Epoch 90/100
 ---- Eval Epoch 100/100
----- Epoch 209/600 in 118.04s with 0.09 loss
----- Epoch 219/600 in 266.46s with 0.09 loss
----- Epoch 229/600 in 194.64s with 0.09 loss
----- Epoch 239/600 in 216.08s with 0.09 loss
+---- Epoch 209/600 in 189.68s with 0.0 loss
+---- Epoch 219/600 in 248.16s with 0.0 loss

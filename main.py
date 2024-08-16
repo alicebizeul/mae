@@ -41,12 +41,13 @@ def parse_args():
     parser.add_argument('--learning_rate', type=float, default=1.5e-4, help='Learning rate for the optimizer.')
     parser.add_argument('--mask-ratio', type=float, default=0.75, help='Learning rate for the optimizer.')
     parser.add_argument('--ratio_pc', type=float, default=0.94, help='Ratio of principal components to retain.')
-    # parser.add_argument('--type', type=str, default="ae_mask",choices=["ae","pca_ae","ae_mask"],help='Ratio of principal components to retain.')
-    # parser.add_argument('--arch', type=str, default="resnet9",choices=['resnet9','resnet18','resnet34','resnet50'],help='Ratio of principal components to retain.')    
+    parser.add_argument('--type', type=str, default="ae_mask",choices=["ae","pca_ae","ae_mask"],help='Ratio of principal components to retain.')
+    parser.add_argument('--arch', type=str, default="vit_t",choices=['vit_t','vit_s'],help='Ratio of principal components to retain.')    
     parser.add_argument('--save_dir', type=str, default="/local/home/abizeul/reconstruction/outputs",help='Ratio of principal components to retain.')    
     parser.add_argument('--run_id', type=str, default="ae",help='Ratio of principal components to retain.')    
     parser.add_argument('--seed', type=int, default=0, help='Batch size for training.')
     parser.add_argument('--debug', action="store_true", help='Debug round with subsample.')
+    parser.add_argument('--small_scale', action="store_true", help='Debug round with subsample.')
     parser.add_argument('--eval', action="store_true", help='Debug round with subsample.')
     parser.add_argument('--pretrained', default=None, help="Weights")
     parser.add_argument('--root', type=str, default="/local/cluster/abizeul/data")
@@ -116,27 +117,28 @@ def main():
     if args.debug:
         subset_indices = torch.randperm(len(trainset))[:10*args.batch_size]
         trainset = Subset(trainset, subset_indices)
+    elif args.small_scale:
+        subset_indices = torch.randperm(len(trainset))[:int(0.5*len(trainset))]
+        trainset = Subset(trainset, subset_indices)
 
-    trainloader =  torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=True, num_workers=8, drop_last=True)
-    trainloader_single=  torch.utils.data.DataLoader(trainset_eval, batch_size=args.batch_size, shuffle=True, num_workers=8, drop_last=True)
-    trainloader_og=  torch.utils.data.DataLoader(trainset_eval2, batch_size=args.batch_size, shuffle=True, num_workers=8, drop_last=True)
-    valloader  =  torch.utils.data.DataLoader(valset, batch_size=args.batch_size, shuffle=False, num_workers=8, drop_last=True)
-    valloader_og  =  torch.utils.data.DataLoader(valset2, batch_size=args.batch_size, shuffle=False, num_workers=8, drop_last=True)
-
-    # # compute original eigenvalues
-    # eigenvalues = {}
-    # data = []
-    # for _, (batch,_) in enumerate(valloader):
-    #     data.append(torch.reshape(batch.detach(),[batch.shape[0],-1]).numpy())
-    # eigenvalues[0] = get_eigenvalues(np.concatenate(data,axis=0))
+    trainloader =  torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=True, num_workers=16, drop_last=True)
+    trainloader_single=  torch.utils.data.DataLoader(trainset_eval, batch_size=args.batch_size, shuffle=True, num_workers=16, drop_last=True)
+    trainloader_og=  torch.utils.data.DataLoader(trainset_eval2, batch_size=args.batch_size, shuffle=True, num_workers=16, drop_last=True)
+    valloader  =  torch.utils.data.DataLoader(valset, batch_size=args.batch_size, shuffle=False, num_workers=16, drop_last=True)
+    valloader_og  =  torch.utils.data.DataLoader(valset2, batch_size=args.batch_size, shuffle=False, num_workers=16, drop_last=True)
 
     # Model, criterion, and optimizer
     # config, bottleneck = get_configs(arch=args.arch)
     # if args.type != "ae_mask":
     #     config = ViTMAEConfig(hidden_size=192,num_attention_head=3,intermediate_size=768,image_size=64,patch_size=8,mask_ratio=0.0,norm_pix_loss=True)
     # else:
-    config = ViTMAEConfig(hidden_size=192,num_attention_head=3,intermediate_size=768,image_size=64,patch_size=8,mask_ratio=args.mask_ratio,norm_pix_loss=True)
-    
+
+    if args.arch == "vit_t":
+        config = ViTMAEConfig(hidden_size=192,num_attention_head=3,intermediate_size=768,image_size=64,patch_size=8,mask_ratio=args.mask_ratio,norm_pix_loss=True,attn_implementation="eager")
+    elif args.arch == "vit_s":
+        config = ViTMAEConfig(hidden_size=384,num_attention_head=6,intermediate_size=1536,image_size=64,patch_size=8,mask_ratio=args.mask_ratio,norm_pix_loss=True,attn_implementation="eager")
+    else: raise NotImplementedError
+
     model = ViTMAEForPreTraining(config).to(device)
     if args.pretrained is not None:
         try:
@@ -146,7 +148,7 @@ def main():
             print(model.load_state_dict(torch.load(args.pretrained)).state_dict())
             print("Loading of weights did not work",flush=True)
 
-    latent_dim = 192  # HARDCODED
+    latent_dim = 192 if args.arch == "vit_t" else 384 if args.arch== "vit_s" else 192 # HARDCODED
     criterion = nn.MSELoss()
     optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=0.05)
     scheduler = LinearWarmupScheduler(optimizer, 10, args.epochs, args.learning_rate)
@@ -164,12 +166,14 @@ def main():
     # logging
     loss_values, loss_tracking, loss_values_eval, loss_values_eval_og, loss_tracking_eval, loss_tracking_eval_og = [], [], [], [], [], []
     scores, scores_og = {}, {}
+    time_batch=[]
     for epoch in range(args.epochs):
         if not args.eval:
             model.train().to("cuda")
             t0 = time.time()
-
+            t0_1 = time.time()
             for batch_index, (batch1, batch2) in enumerate(trainloader):
+                
                 optimizer.zero_grad()
 
                 batch1 = batch1.to(device)
@@ -178,13 +182,13 @@ def main():
                 outputs = model(batch1)
                 reconstruction = model.unpatchify(outputs.logits)
                 
-                # if args.type == "ae_mask":
-                mask = outputs.mask.unsqueeze(-1).repeat(1, 1, model.config.patch_size**2 *3)  # (N, H*W, p*p*3)
-                mask = model.unpatchify(mask)
-                if epoch==0 and batch_index==0: print("Sum of mask",torch.sum(mask))
-                loss = criterion(mask*batch2,mask*reconstruction)
-                # else:
-                #     loss = criterion(batch2,reconstruction)
+                if mask_ratio > 0.0:
+                    mask = outputs.mask.unsqueeze(-1).repeat(1, 1, model.config.patch_size**2 *3)  # (N, H*W, p*p*3)
+                    mask = model.unpatchify(mask)
+                    if epoch==0 and batch_index==0: print("Sum of mask",torch.sum(mask))
+                    loss = criterion(mask*batch2,mask*reconstruction)
+                else:
+                    loss = criterion(batch2,reconstruction)
                 # else:
                 #     reconstruction = model(batch)
                 #     loss = criterion(batch,reconstruction)
@@ -194,12 +198,16 @@ def main():
                 loss_values.append(np.sqrt(loss.item()))
                 average_loss = np.mean(loss_values)
                 loss_tracking.append(average_loss)
-
+                
                 if (epoch%args.eval_freq==0 or (epoch+1)==args.epochs) and batch_index==0:
-                    # if args.type=="ae_mask":
-                    save_reconstructed_images((-1*(mask[:10]-1))*batch1[:10],(-1*(mask[:10]-1))*batch2[:10], reconstruction[:10], epoch, args.save_dir,"train")
-                    # else:
-                    #     save_reconstructed_images(batch1[:10], batch2[:10], reconstruction[:10], epoch, args.save_dir,"train")
+                    if mask_ratio > 0:
+                        save_reconstructed_images((-1*(mask[:10]-1))*batch1[:10],(-1*(mask[:10]-1))*batch2[:10], reconstruction[:10], epoch, args.save_dir,"train")
+                    else:
+                        save_reconstructed_images(batch1[:10], batch2[:10], reconstruction[:10], epoch, args.save_dir,"train")
+
+                # time_batch.append(time.time()-t0_1)
+                # t0_1=time.time()
+                # print(batch_index,"/",len(trainloader),np.mean(time_batch))
 
             # plotting
             plot_loss(loss_tracking,name_loss="RMSE",dir=args.save_dir,name_file="_train")
@@ -228,8 +236,7 @@ def main():
             with torch.no_grad():
                 for _, (batch, labels) in enumerate(trainloader_single):
                     batch = batch.to(device)
-                    outputs = model_eval(batch,output_attentions=True,return_dict=True) #[0][:,0].reshape(batch.shape[0],-1).detach().cpu()
-                    print(outputs.keys())
+                    outputs = model_eval(batch,output_attentions=True) #[0][:,0].reshape(batch.shape[0],-1).detach().cpu()
                     attentions = outputs.attentions[-1].mean(1).detach().cpu()
                     outputs = outputs.last_hidden_state[:,0].reshape(batch.shape[0],-1).detach().cpu()
 
@@ -246,7 +253,7 @@ def main():
             with torch.no_grad():
                 for _, (batch, labels) in enumerate(valloader):
                     batch = batch.to(device)
-                    outputs = model_eval(batch,output_attentions=True,return_dict=True) #[0][:,0].reshape(batch.shape[0],-1).detach().cpu()
+                    outputs = model_eval(batch,output_attentions=True) #[0][:,0].reshape(batch.shape[0],-1).detach().cpu()
                     attentions = outputs.attentions[-1].mean(1).detach().cpu()
                     outputs = outputs.last_hidden_state[:,0].reshape(batch.shape[0],-1).detach().cpu()
 
@@ -258,6 +265,12 @@ def main():
 
             valset = RepDataset(images_list, representations_list,labels_list, attentions_list)
             valloader_eval  =  torch.utils.data.DataLoader(valset, batch_size=args.batch_size_eval, shuffle=False, num_workers=8, drop_last=True)
+
+            # if we are at the last epoch than we want to reinitialize the head and optimizer
+            if (epoch+1)==args.epochs:
+                head = nn.Linear(latent_dim,200).to(device)
+                optimizer_head = optim.AdamW(head.parameters(), lr=1e-2)
+                scheduler_head = LinearWarmupScheduler(optimizer_head, 10, args.eval_epochs, 1e-2)
 
             # final evaluation
             for eval_epoch in range(args.eval_epochs):
@@ -303,7 +316,6 @@ def main():
             scores[epoch]=round(score,2)
             # plot
             plot_performance(list(scores.keys()),list(scores.values()),args.save_dir)
-
 
             if (epoch+1)==args.epochs:
 
@@ -376,17 +388,17 @@ def main():
                     # plot loss
                     plot_loss(loss_tracking_eval_og,name_loss="XEnt",dir=args.save_dir,name_file="_eval_og")
                     
-            score = 0
-            with torch.no_grad():
-                for _, (imgs, batch, labels, atts) in enumerate(valloader_eval):
-                    batch = batch.to(device)
-                    prediction = torch.argmax(head_og(batch),dim=-1).detach().cpu()
-                    score += sum(1*(prediction.numpy() == labels.detach().cpu().numpy()))
-                score /= len(valloader_eval)*args.batch_size
-                score *= 100
-            scores_og[epoch]=round(score,2)
-            # plot
-            plot_performance(list(scores_og.keys()),list(scores_og.values()),args.save_dir,name="og")
+                score = 0
+                with torch.no_grad():
+                    for _, (imgs, batch, labels, atts) in enumerate(valloader_eval):
+                        batch = batch.to(device)
+                        prediction = torch.argmax(head_og(batch),dim=-1).detach().cpu()
+                        score += sum(1*(prediction.numpy() == labels.detach().cpu().numpy()))
+                    score /= len(valloader_eval)*args.batch_size_eval
+                    score *= 100
+                scores_og[epoch]=round(score,2)
+                # plot
+                plot_performance(list(scores_og.keys()),list(scores_og.values()),args.save_dir,name="og")
 
             # going back
             del model_eval
