@@ -1,0 +1,9 @@
+# outputs 
+./output_log
+./output 
+
+# bash scripts
+*.sh
+
+#figures
+./figures
