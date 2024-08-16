@@ -1,6 +1,6 @@
 # outputs 
-./output_log
-./output 
+./output_log/
+./output/ 
 
 # bash scripts
 *.sh

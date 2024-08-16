@@ -1,0 +1,28 @@
+No devices were found
+Traceback (most recent call last):
+  File "/cluster/home/abizeul/mae/main.py", line 418, in <module>
+    main()
+  File "/cluster/home/abizeul/mae/main.py", line 169, in main
+    model.train().to("cuda")
+  File "/cluster/customapps/biomed/vogtlab/abizeul/software/anaconda/envs/reconstruction/lib/python3.12/site-packages/transformers/modeling_utils.py", line 2796, in to
+    return super().to(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/cluster/customapps/biomed/vogtlab/abizeul/software/anaconda/envs/reconstruction/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1174, in to
+    return self._apply(convert)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/cluster/customapps/biomed/vogtlab/abizeul/software/anaconda/envs/reconstruction/lib/python3.12/site-packages/torch/nn/modules/module.py", line 780, in _apply
+    module._apply(fn)
+  File "/cluster/customapps/biomed/vogtlab/abizeul/software/anaconda/envs/reconstruction/lib/python3.12/site-packages/torch/nn/modules/module.py", line 780, in _apply
+    module._apply(fn)
+  File "/cluster/customapps/biomed/vogtlab/abizeul/software/anaconda/envs/reconstruction/lib/python3.12/site-packages/torch/nn/modules/module.py", line 780, in _apply
+    module._apply(fn)
+  [Previous line repeated 1 more time]
+  File "/cluster/customapps/biomed/vogtlab/abizeul/software/anaconda/envs/reconstruction/lib/python3.12/site-packages/torch/nn/modules/module.py", line 805, in _apply
+    param_applied = fn(param)
+                    ^^^^^^^^^
+  File "/cluster/customapps/biomed/vogtlab/abizeul/software/anaconda/envs/reconstruction/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1160, in convert
+    return t.to(
+           ^^^^^
+  File "/cluster/customapps/biomed/vogtlab/abizeul/software/anaconda/envs/reconstruction/lib/python3.12/site-packages/torch/cuda/__init__.py", line 314, in _lazy_init
+    torch._C._cuda_init()
+RuntimeError: No CUDA GPUs are available
