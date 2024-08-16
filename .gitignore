@@ -1,9 +1,12 @@
 # outputs 
 ./output_log/
-./output/ 
+/output_log/*
+./outputs/ 
+outputs/*
 
 # bash scripts
 *.sh
 
 #figures
 ./figures
+/figures/*
