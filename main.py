@@ -140,6 +140,7 @@ def main():
     else: raise NotImplementedError
 
     model = ViTMAEForPreTraining(config).to(device)
+    
     if args.pretrained is not None:
         try:
             print(model.load_state_dict(torch.load(args.pretrained).state_dict()),flush=True)
