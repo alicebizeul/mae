@@ -41,14 +41,14 @@ def parse_args():
     parser.add_argument('--learning_rate', type=float, default=1.5e-4, help='Learning rate for the optimizer.')
     parser.add_argument('--mask-ratio', type=float, default=0.75, help='Learning rate for the optimizer.')
     parser.add_argument('--ratio_pc', type=float, default=0.94, help='Ratio of principal components to retain.')
-    parser.add_argument('--type', type=str, default="ae_mask",choices=["ae","pca_ae","ae_mask"],help='Ratio of principal components to retain.')
-    parser.add_argument('--arch', type=str, default="vit_t",choices=['vit_t','vit_s'],help='Ratio of principal components to retain.')    
+    parser.add_argument('--arch', type=str, default="vit_t",choices=['vit_t','vit_s','vit_b'],help='Ratio of principal components to retain.')    
     parser.add_argument('--save_dir', type=str, default="/local/home/abizeul/reconstruction/outputs",help='Ratio of principal components to retain.')    
     parser.add_argument('--run_id', type=str, default="ae",help='Ratio of principal components to retain.')    
     parser.add_argument('--seed', type=int, default=0, help='Batch size for training.')
     parser.add_argument('--debug', action="store_true", help='Debug round with subsample.')
     parser.add_argument('--small_scale', action="store_true", help='Debug round with subsample.')
     parser.add_argument('--eval', action="store_true", help='Debug round with subsample.')
+    parser.add_argument('--facebook', action="store_true", help='Debug round with subsample.')
     parser.add_argument('--pretrained', default=None, help="Weights")
     parser.add_argument('--root', type=str, default="/local/cluster/abizeul/data")
 
@@ -104,7 +104,13 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Data transforms
-    transform = transforms.ToTensor()
+    if args.facebook:
+        transform = transforms.Compose([
+            transforms.Resize((224,224)),  # Replace with the desired size
+            transforms.ToTensor()
+        ])
+    else:
+        transform = transforms.ToTensor()
 
     # Data
     trainset = PairedImageDataset(folder_A=f'{args.root}/{args.dataset}/train', folder_B=f'{args.root}/{args.dataset2}/train', transform=transform)
@@ -120,6 +126,7 @@ def main():
     elif args.small_scale:
         subset_indices = torch.randperm(len(trainset))[:int(0.5*len(trainset))]
         trainset = Subset(trainset, subset_indices)
+
 
     trainloader =  torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=True, num_workers=16, drop_last=True)
     trainloader_single=  torch.utils.data.DataLoader(trainset_eval, batch_size=args.batch_size, shuffle=True, num_workers=16, drop_last=True)
@@ -137,9 +144,13 @@ def main():
         config = ViTMAEConfig(hidden_size=192,num_attention_head=3,intermediate_size=768,image_size=64,patch_size=8,mask_ratio=args.mask_ratio,norm_pix_loss=True,attn_implementation="eager")
     elif args.arch == "vit_s":
         config = ViTMAEConfig(hidden_size=384,num_attention_head=6,intermediate_size=1536,image_size=64,patch_size=8,mask_ratio=args.mask_ratio,norm_pix_loss=True,attn_implementation="eager")
-    else: raise NotImplementedError
+    elif args.arch == "vit_b":
+        config = ViTMAEConfig(hidden_size=768,num_attention_head=12,intermediate_size=1536,image_size=64,patch_size=8,mask_ratio=args.mask_ratio,norm_pix_loss=True,attn_implementation="eager")
+    else: 
+        raise NotImplementedError
 
     model = ViTMAEForPreTraining(config).to(device)
+    
     if args.pretrained is not None:
         try:
             print(model.load_state_dict(torch.load(args.pretrained).state_dict()),flush=True)
@@ -148,7 +159,7 @@ def main():
             print(model.load_state_dict(torch.load(args.pretrained)).state_dict())
             print("Loading of weights did not work",flush=True)
 
-    latent_dim = 192 if args.arch == "vit_t" else 384 if args.arch== "vit_s" else 192 # HARDCODED
+    latent_dim = 192 if args.arch == "vit_t" else 384 if args.arch== "vit_s" else 768 if args.arch == "vit_b" else 192# HARDCODED
     criterion = nn.MSELoss()
     optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=0.05)
     scheduler = LinearWarmupScheduler(optimizer, 10, args.epochs, args.learning_rate)
@@ -182,7 +193,7 @@ def main():
                 outputs = model(batch1)
                 reconstruction = model.unpatchify(outputs.logits)
                 
-                if mask_ratio > 0.0:
+                if args.mask_ratio > 0.0:
                     mask = outputs.mask.unsqueeze(-1).repeat(1, 1, model.config.patch_size**2 *3)  # (N, H*W, p*p*3)
                     mask = model.unpatchify(mask)
                     if epoch==0 and batch_index==0: print("Sum of mask",torch.sum(mask))
@@ -200,7 +211,7 @@ def main():
                 loss_tracking.append(average_loss)
                 
                 if (epoch%args.eval_freq==0 or (epoch+1)==args.epochs) and batch_index==0:
-                    if mask_ratio > 0:
+                    if args.mask_ratio > 0:
                         save_reconstructed_images((-1*(mask[:10]-1))*batch1[:10],(-1*(mask[:10]-1))*batch2[:10], reconstruction[:10], epoch, args.save_dir,"train")
                     else:
                         save_reconstructed_images(batch1[:10], batch2[:10], reconstruction[:10], epoch, args.save_dir,"train")
@@ -226,8 +237,12 @@ def main():
                 new_state_dict[new_key] = value
 
             # define evaluation model
-            model_eval = ViTMAEModel(config)
-            model_eval.load_state_dict(new_state_dict,strict=False)
+            if args.facebook:
+                model_eval = ViTMAEModel.from_pretrained('facebook/vit-mae-base')
+            else:
+                model_eval = ViTMAEModel(config)
+                model_eval.load_state_dict(new_state_dict,strict=False)
+
             model_eval=model_eval.to(device)
             del new_state_dict
 
@@ -239,7 +254,6 @@ def main():
                     outputs = model_eval(batch,output_attentions=True) #[0][:,0].reshape(batch.shape[0],-1).detach().cpu()
                     attentions = outputs.attentions[-1].mean(1).detach().cpu()
                     outputs = outputs.last_hidden_state[:,0].reshape(batch.shape[0],-1).detach().cpu()
-
                     for i, l, r, a in zip(batch, labels,outputs,attentions):
                         representations_list.append(r)
                         attentions_list.append(a)
@@ -295,9 +309,30 @@ def main():
                     loss_values_eval.append(loss.item())
 
                     if eval_epoch == 0 and batch_index==0:
-                        cls_token_map = atts[:,0,1:].reshape([-1,8,8])
-                        att_map = F.interpolate(cls_token_map.unsqueeze(1),size=(64,64),mode='bilinear', align_corners=False)
-                        save_attention_maps(imgs[:10],att_map[:10],epoch, args.save_dir,"eval")
+
+                        att_map_cls = atts[:,0,1:]
+                        att_map_spatial = torch.mean(atts[:,1:,1:],dim=-1)
+                        att_map_cls = att_map_cls.reshape([args.batch_size_eval,int(np.sqrt(att_map_cls.shape[-1])),int(np.sqrt(att_map_cls.shape[-1]))])
+                        att_map_spatial = att_map_spatial.reshape([args.batch_size_eval,int(np.sqrt(att_map_spatial.shape[-1])),int(np.sqrt(att_map_spatial.shape[-1]))])
+                        save_attention_maps(imgs[:10],att_map_cls[:10].unsqueeze(1),att_map_spatial[:10].unsqueeze(1),epoch, args.save_dir,"eval")
+
+                        # average over batch
+                        att_map_cls = torch.mean(att_map_cls,dim=0)
+                        att_map_spatial = torch.mean(att_map_spatial,dim=0)
+
+                        fig, axes = plt.subplots(1, 2, figsize=(15, 5))
+                        im1 = axes[0].imshow(att_map_cls.unsqueeze(0).permute(1, 2, 0),cmap='viridis')
+                        axes[0].set_title('CLS Attention Maps')
+                        axes[0].axis('off')
+                        fig.colorbar(im1, ax=axes[0], fraction=0.046, pad=0.04)  # Add color bar for CLS Attention Maps
+
+                        im2 = axes[1].imshow(att_map_spatial.unsqueeze(0).permute(1, 2, 0),cmap='viridis')
+                        axes[1].set_title('Average Spatial Attention Maps')
+                        axes[1].axis('off')
+                        fig.colorbar(im2, ax=axes[1], fraction=0.046, pad=0.04)  # Add color bar for CLS Attention Maps
+
+                        plt.savefig(os.path.join(args.save_dir, f'epoch_{epoch}_eval_attention_batchavg.png'))
+                        plt.close()
 
                 loss_tracking_eval.append(np.mean(loss_values_eval))
                 scheduler_head.step(eval_epoch)
@@ -377,8 +412,9 @@ def main():
                         loss_values_eval_og.append(loss.item())
 
                         if eval_epoch == 0 and batch_index==0:
-                            cls_token_map = atts[:,0,1:].reshape([-1,8,8])
-                            att_map = F.interpolate(cls_token_map.unsqueeze(1),size=(64,64),mode='bilinear', align_corners=False)
+                            att_map = atts[:,0,1:]
+                            att_map = att_map.reshape([args.batch_size_eval,int(np.sqrt(att_map.shape[-1])),int(np.sqrt(att_map.shape[-1]))])
+                            # att_map = F.interpolate(cls_token_map.unsqueeze(1),size=(64,64),mode='bilinear', align_corners=False)
                             save_attention_maps(imgs[:10],att_map[:10],epoch, args.save_dir,"eval_og")
 
 
