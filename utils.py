@@ -34,22 +34,27 @@ def save_reconstructed_images(input, target, reconstructed, epoch, output_dir, n
     plt.close()
 
 # Define the function to save images and their reconstructions
-def save_attention_maps(input, attention, epoch, output_dir, name):
+def save_attention_maps(input, attention_cls, attention_spatial, epoch, output_dir, name):
     os.makedirs(output_dir, exist_ok=True)
     input_grid = torchvision.utils.make_grid(input[:8].cpu(), nrow=4, normalize=True)
-    target_grid = torchvision.utils.make_grid(attention[:8].cpu(), nrow=4, normalize=True)
+    cls_grid = torchvision.utils.make_grid(attention_cls[:8].cpu(), nrow=4, normalize=True)
+    spatial_grid = torchvision.utils.make_grid(attention_spatial[:8].cpu(), nrow=4, normalize=True)
     
-    _, axes = plt.subplots(1, 2, figsize=(15, 5))
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
     axes[0].imshow(input_grid.permute(1, 2, 0))
     axes[0].set_title('Input Images')
     axes[0].axis('off')
 
-    axes[1].imshow(input_grid.permute(1, 2, 0))
-    axes[1].imshow(target_grid.permute(1, 2, 0),cmap='jet', alpha=0.5)
-    axes[1].set_title('Attention Maps')
+    im1= axes[1].imshow(cls_grid.permute(1, 2, 0),cmap='gray')
+    axes[1].set_title('CLS Attention Maps')
     axes[1].axis('off')
+    fig.colorbar(im1, ax=axes[1], fraction=0.046, pad=0.04)  # Add color bar for CLS Attention Maps
 
-    
+    im2 = axes[2].imshow(spatial_grid.permute(1, 2, 0),cmap='gray')
+    axes[2].set_title('Average Spatial Attention Maps')
+    axes[2].axis('off')
+    fig.colorbar(im2, ax=axes[2], fraction=0.046, pad=0.04)  # Add color bar for CLS Attention Maps
+
     plt.savefig(os.path.join(output_dir, f'epoch_{epoch}_{name}_attention.png'))
     plt.close()
 
