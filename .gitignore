@@ -12,3 +12,6 @@ outputs/*
 #figures
 ./figures
 /figures/*
+
+# pycache
+__pycache__
