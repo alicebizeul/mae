@@ -29,8 +29,9 @@ conda activate reconstruction
 # python main.py --type ae_mask --run_id ae_mask --epochs 1000 --seed 0 --dataset "tiny-imagenet-200" --eval_freq 200 --mask-ratio 0.50 --eval_epochs 100
 
 # python main.py --type ae --run_id ae_mask --epochs 1 --seed 0 --dataset "tinyimagenet_0.99_percent" --eval_freq 600 --mask-ratio 0.0 --eval_epochs 100 --eval --pretrained "/local/home/abizeul/reconstruction/outputs/ae_mask/ViT/0/0.0/networks/model_600_epochs.pth"
-RATIO=0.99
-MASK=0.0
-python main.py --save_dir ./outputs --run_id ./debug  --eval --root ~/data/ --dataset tiny-imagenet-200 --dataset2 tiny-imagenet-200 --eval_freq 100 --mask-ratio "$MASK" --eval_epochs 100  --batch_size 16 --small_scale --arch "vit_t"
+RATIO=0.0
+MASK=0.75
+python main.py --patch_size 16 --save_dir ./outputs --run_id ./debug --root ~/data/ --dataset "tinyimagenet_0.99_percent_top" --dataset2 "tinyimagenet_0.99_percent_bottom" --eval_freq 100 --mask-ratio "$MASK" --eval_epochs 100  --batch_size 16 --small_scale --arch "vit_t"
+
 
 # python main.py --save_dir ./outputs --run_id ./facebook  --eval --facebook --root ~/data/ --dataset tiny-imagenet-200 --dataset2 tiny-imagenet-200 --eval_freq 100 --mask-ratio "$MASK" --eval_epochs 100  --batch_size 16 --batch_size_eval 16 --small_scale --arch "vit_b"

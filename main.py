@@ -133,7 +133,6 @@ def main():
         subset_indices = torch.randperm(len(trainset))[:int(0.5*len(trainset))]
         trainset = Subset(trainset, subset_indices)
 
-
     trainloader =  torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=True, num_workers=16, drop_last=True)
     trainloader_single=  torch.utils.data.DataLoader(trainset_eval, batch_size=args.batch_size, shuffle=True, num_workers=16, drop_last=True)
     trainloader_og=  torch.utils.data.DataLoader(trainset_eval2, batch_size=args.batch_size, shuffle=True, num_workers=16, drop_last=True)
@@ -183,7 +182,6 @@ def main():
     # logging
     loss_values, loss_tracking, loss_values_eval, loss_values_eval_og, loss_tracking_eval, loss_tracking_eval_og = [], [], [], [], [], []
     scores, scores_og = {}, {}
-    time_batch=[]
     for epoch in range(args.epochs):
         if not args.eval:
             model.train().to("cuda")

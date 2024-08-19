@@ -9,6 +9,7 @@ import torch
 from torch.optim.optimizer import Optimizer
 from typing import Dict, Iterable, Optional, Callable, Tuple
 from torch import nn
+from torchvision.datasets import ImageFolder
 
 # Define the function to save images and their reconstructions
 def save_reconstructed_images(input, target, reconstructed, epoch, output_dir, name):
@@ -86,38 +87,80 @@ class LinearWarmupScheduler:
 
 class PairedImageDataset(Dataset):
     def __init__(self, folder_A, folder_B, transform=None):
-        self.folder_A = folder_A
-        self.folder_B = folder_B
+        """
+        Initialize the dataset with two root directories and an optional transform.
+
+        :param root1: Root directory for the first dataset.
+        :param root2: Root directory for the second dataset.
+        :param transform: Transformations to apply to the images.
+        """
+        self.dataset1 = ImageFolder(root=folder_A)
+        self.dataset2 = ImageFolder(root=folder_B)
         self.transform = transform
 
-        # Get list of image names in folder_A
-        self.image_names = os.listdir(folder_A)
-        if os.path.isdir(os.path.join(folder_A,self.image_names[0])):
-            self.image_names_extended = []
-            for dir in self.image_names:
-                self.image_names_extended.extend([os.path.join(dir,x) for x in os.listdir(os.path.join(folder_A,dir))])
-        # Optionally sort to ensure consistent ordering
-        self.image_names= self.image_names_extended
-        self.image_names.sort()
-        del self.image_names_extended
+        # Create a mapping from subpaths to indices in each dataset
+        self.subpath_to_idx1 = {os.path.relpath(path, folder_A): idx for idx, (path, _) in enumerate(self.dataset1.samples)}
+        self.subpath_to_idx2 = {os.path.relpath(path, folder_B): idx for idx, (path, _) in enumerate(self.dataset2.samples)}
+        # Find common subpaths
+        self.common_subpaths = list(set(self.subpath_to_idx1.keys()) & set(self.subpath_to_idx2.keys()))
 
     def __len__(self):
-        return len(self.image_names)
+        return len(self.common_subpaths)
 
     def __getitem__(self, idx):
-        img_name = self.image_names[idx]
+        subpath = self.common_subpaths[idx]
 
-        img_A_path = os.path.join(self.folder_A, img_name)
-        img_B_path = os.path.join(self.folder_B, img_name)
+        # Get indices from both datasets
+        idx1 = self.subpath_to_idx1[subpath]
+        idx2 = self.subpath_to_idx2[subpath]
 
-        image_A = Image.open(img_A_path).convert('RGB')
-        image_B = Image.open(img_B_path).convert('RGB')
+        # Load the images
+        img1, _ = self.dataset1[idx1]
+        img2, _ = self.dataset2[idx2]
 
+        # Apply transformations if provided
         if self.transform:
-            image_A = self.transform(image_A)
-            image_B = self.transform(image_B)
+            img1 = self.transform(img1)
+            img2 = self.transform(img2)
 
-        return image_A, image_B
+        return img1, img2
+
+
+# class PairedImageDataset(Dataset):
+#     def __init__(self, folder_A, folder_B, transform=None):
+#         self.folder_A = folder_A
+#         self.folder_B = folder_B
+#         self.transform = transform
+
+#         # Get list of image names in folder_A
+#         self.image_names = os.listdir(folder_A)
+#         if os.path.isdir(os.path.join(folder_A,self.image_names[0])):
+#             print(self.image_names)
+#             self.image_names_extended = []
+#             for dir in self.image_names:
+#                 self.image_names_extended.extend([os.path.join(dir,x) for x in os.listdir(os.path.join(folder_A,dir))])
+#         # Optionally sort to ensure consistent ordering
+#         self.image_names= self.image_names_extended
+#         self.image_names.sort()
+#         del self.image_names_extended
+
+#     def __len__(self):
+#         return len(self.image_names)
+
+#     def __getitem__(self, idx):
+#         img_name = self.image_names[idx]
+
+#         img_A_path = os.path.join(self.folder_A, img_name)
+#         img_B_path = os.path.join(self.folder_B, img_name)
+
+#         image_A = Image.open(img_A_path).convert('RGB')
+#         image_B = Image.open(img_B_path).convert('RGB')
+
+#         if self.transform:
+#             image_A = self.transform(image_A)
+#             image_B = self.transform(image_B)
+
+#         return image_A, image_B
     
 class Lars(Optimizer):
     r"""Implements the LARS optimizer from `"Large batch training of convolutional networks"
