@@ -6,6 +6,8 @@ outputs/*
 
 # bash scripts
 *.sh
+./scripts/
+/scripts/*
 
 #figures
 ./figures

@@ -50,7 +50,8 @@ def parse_args():
     parser.add_argument('--eval', action="store_true", help='Debug round with subsample.')
     parser.add_argument('--facebook', action="store_true", help='Debug round with subsample.')
     parser.add_argument('--pretrained', default=None, help="Weights")
-    parser.add_argument('--root', type=str, default="/local/cluster/abizeul/data")
+    parser.add_argument('--root', type=str, default=None)
+    parser.add_argument('--patch_size', type=int, default=8, help='Learning rate for the optimizer.')
 
     args = parser.parse_args()
 
@@ -85,6 +86,11 @@ def parse_args():
 def main():
     # Hyperparameters
     args = parse_args()
+
+    # replace root to tmp is not specified
+    if args.root is None:
+        args.root = os.environ.get("TMP")
+        print("Data folder",args.root)
 
     # setting seeds 
     np.random.seed(args.seed)
@@ -141,11 +147,11 @@ def main():
     # else:
 
     if args.arch == "vit_t":
-        config = ViTMAEConfig(hidden_size=192,num_attention_head=3,intermediate_size=768,image_size=64,patch_size=8,mask_ratio=args.mask_ratio,norm_pix_loss=True,attn_implementation="eager")
+        config = ViTMAEConfig(hidden_size=192,num_attention_head=3,intermediate_size=768,image_size=64,patch_size=args.patch_size,mask_ratio=args.mask_ratio,norm_pix_loss=True,attn_implementation="eager")
     elif args.arch == "vit_s":
-        config = ViTMAEConfig(hidden_size=384,num_attention_head=6,intermediate_size=1536,image_size=64,patch_size=8,mask_ratio=args.mask_ratio,norm_pix_loss=True,attn_implementation="eager")
+        config = ViTMAEConfig(hidden_size=384,num_attention_head=6,intermediate_size=1536,image_size=64,patch_size=args.patch_size,mask_ratio=args.mask_ratio,norm_pix_loss=True,attn_implementation="eager")
     elif args.arch == "vit_b":
-        config = ViTMAEConfig(hidden_size=768,num_attention_head=12,intermediate_size=1536,image_size=64,patch_size=8,mask_ratio=args.mask_ratio,norm_pix_loss=True,attn_implementation="eager")
+        config = ViTMAEConfig(hidden_size=768,num_attention_head=12,intermediate_size=1536,image_size=64,patch_size=args.patch_size,mask_ratio=args.mask_ratio,norm_pix_loss=True,attn_implementation="eager")
     else: 
         raise NotImplementedError
 
@@ -412,10 +418,12 @@ def main():
                         loss_values_eval_og.append(loss.item())
 
                         if eval_epoch == 0 and batch_index==0:
-                            att_map = atts[:,0,1:]
-                            att_map = att_map.reshape([args.batch_size_eval,int(np.sqrt(att_map.shape[-1])),int(np.sqrt(att_map.shape[-1]))])
-                            # att_map = F.interpolate(cls_token_map.unsqueeze(1),size=(64,64),mode='bilinear', align_corners=False)
-                            save_attention_maps(imgs[:10],att_map[:10],epoch, args.save_dir,"eval_og")
+                            att_map_cls = atts[:,0,1:]
+                            att_map_spatial = torch.mean(atts[:,1:,1:],dim=-1)
+                            att_map_cls = att_map_cls.reshape([args.batch_size_eval,int(np.sqrt(att_map_cls.shape[-1])),int(np.sqrt(att_map_cls.shape[-1]))])
+                            att_map_spatial = att_map_spatial.reshape([args.batch_size_eval,int(np.sqrt(att_map_spatial.shape[-1])),int(np.sqrt(att_map_spatial.shape[-1]))])
+                                
+                            save_attention_maps(imgs[:10],att_map_cls[:10].unsqueeze(1),att_map_spatial[:10].unsqueeze(1),epoch, args.save_dir,"eval_og")
 
 
                     loss_tracking_eval_og.append(np.mean(loss_values_eval_og))
