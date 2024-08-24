@@ -1,0 +1,55 @@
+# @package _global_
+
+data:
+  resolution: 64
+  channels: 3
+  patch_size: 8
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+  classes: 9
+
+datasets:
+  train:
+    _target_: medmnist.PathMNIST
+    root: ${base_data_home}/medmnist
+    split: train
+    download: ${download}
+    size: ${data.resolution}
+    transform: ${transformation.train}
+
+  val:
+    _target_: medmnist.PathMNIST
+    root: ${base_data_home}/medmnist
+    split: val
+    download: ${download}
+    size: ${data.resolution}
+    transform: ${transformation.train}
+
+  test:
+    _target_: medmnist.PathMNIST
+    root: ${base_data_home}/medmnist
+    split: val
+    download: ${download}
+    size: ${data.resolution}
+    transform: ${transformation.train}
+
+extradata:
+  pcamodule:
+    _target_ : numpy.load
+    file: ${base_data_home}/medmnist/pathmnist_pc_matrix.npy
+
+  eigenmodule:
+    _target_: numpy.load
+    file: ${base_data_home}/medmnist/pathmnist_eigenvalues.npy
+
+  eigenratiomodule:
+    _target_: numpy.load
+    file: ${base_data_home}/medmnist/pathmnist_eigenvalues_ratio.npy
+
+datamodule: 
+  _target_: dataset.dataloader.DataModule
+  batch_size: 512
+  num_workers: 8
+  classes: ${data.classes}
+  channels: ${data.channels}
+  resolution: ${data.resolution}

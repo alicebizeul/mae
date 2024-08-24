@@ -1,0 +1,33 @@
+# @package _global_
+
+module:
+  _target_: model.vit_mae.ViTMAEForPreTraining
+
+pl_module:
+  _target_: model.module.ViTMAE
+  learning_rate: 1.5e-4
+  betas: [0.9, 0.95]
+  weight_decay: 0.05
+  optimizer_name: adamw_warmup
+  warmup: 40
+  eval_freq: 100
+
+pl_module_eval:
+  _target_: model.module_eval.ViTMAE_eval
+  learning_rate: 0.1
+  betas: 0.9
+  weight_decay: 0
+  optimizer_name: sgd
+  warmup: 10
+
+module_config: 
+  _target_: transformers.ViTMAEConfig
+  hidden_size: 192
+  num_attention_head: 3
+  intermediate_size: 768
+  norm_pix_loss: True
+  attn_implementation: "eager"
+  mask_ratio: ${masking.pixel_ratio}
+  patch_size: ${data.patch}
+  image_size: ${data.resolution}
+

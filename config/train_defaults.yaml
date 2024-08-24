@@ -1,0 +1,11 @@
+# @package _global_
+defaults:
+  - _self_
+  - base: offline
+  - user: ${oc.env:USER}_personal
+  - dataset: tinyimagenet
+  - masking: mae
+  - model: vit-t
+  - mode: local
+  - experiment: mae_tiny
+  - transformation: mae

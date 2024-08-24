@@ -7,8 +7,9 @@ import os
 # Example loss_tracking data
 # loss_tracking = [...]
 
-def plot_loss(loss,name_loss,dir,name_file=""):
+def plot_loss(loss,name_loss,save_dir,name_file=""):
     # Create a subplot with 1 row and 2 columns
+    os.makedirs(save_dir, exist_ok=True)
     fig = make_subplots(rows=1, cols=2, subplot_titles=('Linear Scale', 'Log Scale'))
 
     # First subplot (Linear scale)
@@ -37,11 +38,11 @@ def plot_loss(loss,name_loss,dir,name_file=""):
     )
 
     # Save the figure as a PNG file
-    output_path = os.path.join(dir, f"loss{name_file}.png")
+    output_path = os.path.join(save_dir, f"loss{name_file}.png")
     fig.write_image(output_path, scale=2)
 
 def plot_performance(x,y,save_dir,name=""):
-
+    os.makedirs(save_dir, exist_ok=True)
     # Create a Plotly figure
     fig = go.Figure()
 

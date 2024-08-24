@@ -1,3 +1,7 @@
+"""
+    Some portions of the code below were taken from prior codebases written by Mark Ibrahim and Randall Balestreiro
+"""
+
 import os 
 import torchvision
 import matplotlib.pyplot as plt
@@ -9,7 +13,119 @@ import torch
 from torch.optim.optimizer import Optimizer
 from typing import Dict, Iterable, Optional, Callable, Tuple
 from torch import nn
+import numpy as np
 from torchvision.datasets import ImageFolder
+from pytorch_lightning.utilities import rank_zero_only
+from typing import List, Optional, Tuple, Dict
+import pytorch_lightning as pl
+from pytorch_lightning.loggers import WandbLogger
+import logging
+from omegaconf import OmegaConf, DictConfig
+import yaml
+import submitit
+import git
+from pathlib import Path
+
+def setup_wandb(
+    config: DictConfig,
+    log: logging.Logger,
+    git_hash: str = "",
+    extra_configs: dict = dict(),
+) -> WandbLogger:
+    
+    log_job_info(log)
+    config_dict = yaml.safe_load(OmegaConf.to_yaml(config, resolve=True))
+    job_logs_dir = os.getcwd()
+
+    # increase timeout per wandb folks' suggestion
+    os.environ["WANDB_INIT_TIMEOUT"] = "60"
+    os.environ["WANDB_DIR"] = config.wandb_dir
+    os.environ["WANDB_DATA_DIR"] = config.wandb_datadir
+    os.environ["WANDB_CACHE_DIR"] = config.wandb_cachedir
+    os.environ["WANDB_CONFIG_DIR"] = config.wandb_configdir
+
+    config_dict["job_logs_dir"] = job_logs_dir
+    config_dict["git_hash"] = git_hash
+
+    name = (
+        config.wandb.tags 
+        + "_"
+        + config.module._target_.split(".")[-1]
+        + "_"
+        + config.datamodule._target_.split(".")[-1]
+    )
+    config_dict.update(extra_configs)
+
+    try:
+        wandb_logger = WandbLogger(
+            name=name,
+            config=config_dict,
+            settings={"start_method": "fork"},
+            **config.wandb,
+        )
+    except Exception as e:
+        print(f"exception: {e}")
+        print("starting wandb in offline mode. To sync logs run")
+        print(f"wandb sync {job_logs_dir}")
+        os.environ["WANDB_MODE"] = "offline"
+        wandb_logger = WandbLogger(
+            name=name,
+            config=config_dict,
+            settings={"start_method": "fork"},
+            **config.wandb,
+        )
+    return wandb_logger
+
+def get_git_hash() -> Optional[str]:
+    try:
+        repo = git.Repo(search_parent_directories=True)
+        sha = repo.head.object.hexsha
+        return sha
+    except:
+        print("not able to find git hash")
+
+
+@rank_zero_only
+def print_config(
+    config: DictConfig,
+    resolve: bool = True,
+) -> None:
+    """Saves and prints content of DictConfig
+    Args:
+        config (DictConfig): Configuration composed by Hydra.
+        resolve (bool, optional): Whether to resolve reference fields of DictConfig.
+    """
+    run_configs = OmegaConf.to_yaml(config, resolve=resolve)
+    print(run_configs)
+    with open("run_configs.yaml", "w") as f:
+        OmegaConf.save(config=config, f=f)
+
+
+def log_job_info(log: logging.Logger):
+    """Logs info about the job directory and SLURM job id"""
+    job_logs_dir = os.getcwd()
+    log.info(f"Logging to {job_logs_dir}")
+    job_id = "local"
+
+    try:
+        job_env = submitit.JobEnvironment()
+        job_id = job_env.job_id
+    except RuntimeError:
+        pass
+    print("This is the job_id",job_id)
+    log.info(f"job id {job_id}")
+
+
+def find_existing_checkpoint(dirpath: str) -> Optional[str]:
+    """Searches dirpath for an existing model checkpoint.
+    If found, returns its path.
+    """
+    ckpts = list(Path(dirpath).rglob("*.ckpt"))
+    if ckpts:
+        ckpt = str(ckpts[-1])
+        print(f"resuming from existing checkpoint: {ckpt}")
+        return ckpt
+    return None
 
 # Define the function to save images and their reconstructions
 def save_reconstructed_images(input, target, reconstructed, epoch, output_dir, name):
@@ -58,6 +174,57 @@ def save_attention_maps(input, attention_cls, attention_spatial, epoch, output_d
 
     plt.savefig(os.path.join(output_dir, f'epoch_{epoch}_{name}_attention.png'))
     plt.close()
+
+def save_attention_maps_batch(att_map_cls, att_map_spatial, epoch, output_dir, name):
+    # average over batch
+    att_map_cls = torch.mean(att_map_cls.detach().cpu(),dim=0)
+    att_map_spatial = torch.mean(att_map_spatial.detach().cpu(),dim=0)
+
+    fig, axes = plt.subplots(1, 2, figsize=(15, 5))
+    im1 = axes[0].imshow(att_map_cls.unsqueeze(0).permute(1, 2, 0),cmap='viridis')
+    axes[0].set_title('CLS Attention Maps')
+    axes[0].axis('off')
+    fig.colorbar(im1, ax=axes[0], fraction=0.046, pad=0.04)  # Add color bar for CLS Attention Maps
+
+    im2 = axes[1].imshow(att_map_spatial.unsqueeze(0).permute(1, 2, 0),cmap='viridis')
+    axes[1].set_title('Average Spatial Attention Maps')
+    axes[1].axis('off')
+    fig.colorbar(im2, ax=axes[1], fraction=0.046, pad=0.04)  # Add color bar for CLS Attention Maps
+
+    plt.savefig(os.path.join(output_dir, f'epoch_{epoch}_{name}_attention_batchavg.png'))
+    plt.close()
+
+class PCImageDataset(Dataset):
+    def __init__(self, folder, pc_path, eigen_path, transform=None, ):
+        """
+        Initialize the dataset with two root directories and an optional transform.
+
+        :param root1: Root directory for the first dataset.
+        :param root2: Root directory for the second dataset.
+        :param transform: Transformations to apply to the images.
+        """
+        self.dataset1 = ImageFolder(root=folder)
+        try:
+            self.pc_matrix = np.load(pc_path)
+            self.eigenvalues = np.load(eigen_path)
+        except:
+            print(f"The path {pc_path} does not exist")
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.dataset1)
+
+    def __getitem__(self, idx):
+
+        # Load the images
+        img1, _ = self.dataset1[idx]
+
+        # Apply transformations if provided
+        if self.transform:
+            img1 = self.transform(img1)
+            img2 = self.transform(img2)
+
+        return img1, img2
 
 def get_eigenvalues(data):
     pca = PCA()  # You can adjust the number of components

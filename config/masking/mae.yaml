@@ -1,0 +1,5 @@
+# @package _global_
+
+masking:
+  type: pixel
+  pixel_ratio: 0.75

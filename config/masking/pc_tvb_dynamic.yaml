@@ -1,0 +1,6 @@
+# @package _global_
+
+masking:
+  type: pc
+  strategy: tvb_dynamic
+  pixel_ratio: 0.0
