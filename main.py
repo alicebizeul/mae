@@ -16,6 +16,7 @@ import csv
 import medmnist
 import numpy
 
+import model
 from model.module import ViTMAE
 from model.module_eval import ViTMAE_eval
 from model.vit_mae import ViTMAEForPreTraining
@@ -31,6 +32,7 @@ from utils import (
 # Configure logging
 log = logging.getLogger(__name__)
 git_hash = get_git_hash()
+OmegaConf.register_new_resolver("compute_lr", lambda base_lr, batch_size: base_lr * (batch_size / 256))
 
 # Main function
 @hydra.main(version_base="1.2", config_path="config", config_name="train_defaults.yaml")
@@ -49,13 +51,12 @@ def main(config: DictConfig) -> None:
         config.datamodule,
         data = config.datasets,
         masking = config.masking,
-        extra_data=config.extradata,
     )
     
     # Creating model
     vit_config = instantiate(config.module_config)
     vit = instantiate(config.module,vit_config)
-    model = instantiate(
+    model_train = instantiate(
         config.pl_module, 
         model=vit,
         datamodule = datamodule,
@@ -76,13 +77,12 @@ def main(config: DictConfig) -> None:
     trainer = pl.Trainer(
             **trainer_configs,
             logger=wandb_logger,
-            use_distributed_sampler=False,
             enable_checkpointing = True,
             num_sanity_val_steps=0,
             callbacks=[checkpoint_callback],
             check_val_every_n_epoch=config.pl_module.eval_freq
         )
-    trainer.fit(model, datamodule=datamodule)
+    trainer.fit(model_train, datamodule=datamodule)
 
 
     # Final evaluation: original data, no pixel or pc masking, MAE eval protocol
@@ -94,14 +94,14 @@ def main(config: DictConfig) -> None:
     )
     model_eval = instantiate(
         config=config.pl_module_eval,
-        model=model.model,
+        model=model_train.model,
         datamodule=datamodule,
         save_dir=config.local_dir
     )
+    del model_train, trainer, vit
     evaluator = pl.Trainer(
             **eval_configs,
             logger=wandb_logger,
-            use_distributed_sampler=False,
             enable_checkpointing = False,
             num_sanity_val_steps=0
         )

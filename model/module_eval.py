@@ -29,8 +29,6 @@ class ViTMAE_eval(pl.LightningModule):
         optimizer_name: str = "adamw",
         warmup: int =10,
         datamodule: Optional[pl.LightningDataModule] = None,
-        eval_freq: int =100,
-        eval_duration: int =100,
         save_dir: str =None,
     ):
         super().__init__()
@@ -43,17 +41,18 @@ class ViTMAE_eval(pl.LightningModule):
         self.image_size = datamodule.image_size
         self.warm_up = warmup
 
-        self.model = model.delete_decoder()
+        model.delete_decoder()
+        self.model = model
         self.model.config.mask_ratio = 0.0
         self.model.vit.embeddings.config.mask_ratio=0.0
         self.classifier = nn.Linear(model.config.hidden_size, self.num_classes)
 
         self.online_classifier_loss = nn.CrossEntropyLoss()
         self.online_train_accuracy = torchmetrics.Accuracy(
-                    task="multiclass", num_classes=self.num_classes
+                    task="multiclass", num_classes=self.num_classes, top_k=1
         )
         self.online_val_accuracy = torchmetrics.Accuracy(
-                    task="multiclass", num_classes=self.num_classes
+                    task="multiclass", num_classes=self.num_classes, top_k=1
         ) 
 
         self.save_dir = save_dir
@@ -65,7 +64,6 @@ class ViTMAE_eval(pl.LightningModule):
         return self.model(x)
 
     def shared_step(self, batch: Tensor, stage: str = "train", batch_idx: int =None):
-        print(self.model.vit.embeddings.config.mask_ratio,self.model.vit.config.mask_ratio)
         if stage == "train":
             img, _, y = batch
 
@@ -86,7 +84,7 @@ class ViTMAE_eval(pl.LightningModule):
             self.train_losses.append(loss_ce.item())
             self.avg_train_losses.append(np.mean(self.train_losses))
 
-            if (self.current_epoch+1)%10==0:
+            if (self.current_epoch+1)%10==0 and batch_idx==0:
                 plot_loss(self.avg_train_losses,name_loss="X-Entropy",save_dir=self.save_dir,name_file="_eval_train")
 
             return  loss_ce
@@ -109,17 +107,18 @@ class ViTMAE_eval(pl.LightningModule):
             )
 
             if batch_idx == 0 and (self.current_epoch+1) not in list(self.performance.keys()): 
-                    self.performance[self.current_epoch+1]=[]
+                self.performance[self.current_epoch+1]=[]
             self.performance[self.current_epoch+1].append(sum(1*(torch.argmax(logits, dim=-1)==y.squeeze())).item())  
 
             # check the attention we get at final
-            attentions = attentions[-1].mean(1)
-            att_map_cls = attentions[:,0,1:]
-            att_map_spatial = torch.mean(attentions[:,1:,1:],dim=-1)
-            att_map_cls = att_map_cls.reshape([img.shape[0],int(np.sqrt(att_map_cls.shape[-1])),int(np.sqrt(att_map_cls.shape[-1]))])
-            att_map_spatial = att_map_spatial.reshape([img.shape[0],int(np.sqrt(att_map_spatial.shape[-1])),int(np.sqrt(att_map_spatial.shape[-1]))])
-            save_attention_maps(img[:10],att_map_cls[:10].unsqueeze(1),att_map_spatial[:10].unsqueeze(1),self.current_epoch+1, self.save_dir,"eval")
-            save_attention_maps_batch(att_map_cls=att_map_cls,att_map_spatial=att_map_spatial,epoch=self.current_epoch+1, output_dir=self.save_dir,name="eval")
+            if self.current_epoch==0 and batch_idx==0:
+                attentions = attentions[-1].mean(1)
+                att_map_cls = attentions[:,0,1:]
+                att_map_spatial = torch.mean(attentions[:,1:,1:],dim=-1)
+                att_map_cls = att_map_cls.reshape([img.shape[0],int(np.sqrt(att_map_cls.shape[-1])),int(np.sqrt(att_map_cls.shape[-1]))])
+                att_map_spatial = att_map_spatial.reshape([img.shape[0],int(np.sqrt(att_map_spatial.shape[-1])),int(np.sqrt(att_map_spatial.shape[-1]))])
+                save_attention_maps(img[:10],att_map_cls[:10].unsqueeze(1),att_map_spatial[:10].unsqueeze(1),self.current_epoch+1, self.save_dir,"eval")
+                save_attention_maps_batch(att_map_cls=att_map_cls,att_map_spatial=att_map_spatial,epoch=self.current_epoch+1, output_dir=self.save_dir,name="eval")
 
             return None    
 

@@ -48,10 +48,10 @@ class ViTMAE(pl.LightningModule):
 
         self.online_classifier_loss = nn.CrossEntropyLoss()
         self.online_train_accuracy = torchmetrics.Accuracy(
-                    task="multiclass", num_classes=self.num_classes
+                    task="multiclass", num_classes=self.num_classes, top_k=1
         )
         self.online_val_accuracy = torchmetrics.Accuracy(
-                    task="multiclass", num_classes=self.num_classes
+                    task="multiclass", num_classes=self.num_classes, top_k=1
         ) 
         self.save_dir = save_dir
         self.train_losses = []
@@ -85,7 +85,7 @@ class ViTMAE(pl.LightningModule):
             self.train_losses.append(loss_mae.item())
             self.avg_train_losses.append(np.mean(self.train_losses))
 
-            if (self.current_epoch+1)%self.eval_freq==0:
+            if (self.current_epoch+1)%self.eval_freq==0 and batch_idx==0:
                 plot_loss(self.avg_train_losses,name_loss="MSE",save_dir=self.save_dir,name_file="_train")
                 plot_loss(self.avg_online_losses,name_loss="X-Ent",save_dir=self.save_dir,name_file="_train_online_cls")
 
@@ -113,7 +113,7 @@ class ViTMAE(pl.LightningModule):
             )
             del logits_cls 
 
-            if (self.current_epoch+1)%self.eval_freq==0:
+            if (self.current_epoch+1)%self.eval_freq==0 and batch_idx==0:
                 plot_loss(self.avg_online_losses,name_loss="X-Ent",save_dir=self.save_dir,name_file="_train_online_cls")
 
             return loss_mae + loss_ce

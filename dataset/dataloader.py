@@ -16,7 +16,7 @@ import time
 USER_NAME = os.environ.get("USER")
 
 class PairedDataset(Dataset):
-    def __init__(self, dataset, masking, extra_data):
+    def __init__(self, dataset, masking):
         """
         Initialize the dataset with two root directories and an optional transform.
 
@@ -26,29 +26,29 @@ class PairedDataset(Dataset):
         """
         self.dataset = dataset
         self.masking = masking
-        if self.masking.type == "pc":
-            assert "pcamodule" in list(extra_data.keys())
-            assert "eigenratiomodule" in list(extra_data.keys())
+        # if self.masking.type == "pc":
+        #     assert "pcamodule" in list(extra_data.keys())
+        #     assert "eigenratiomodule" in list(extra_data.keys())
 
-            self.pc_matrix   = torch.Tensor(extra_data.pcamodule)
-            self.eigenvalues = torch.Tensor(extra_data.eigenratiomodule)
+        #     self.pc_matrix   = torch.Tensor(extra_data.pcamodule)
+        #     self.eigenvalues = torch.Tensor(extra_data.eigenratiomodule)
 
-            self.find_threshold = lambda eigenvalues ,ratio: np.argmin(np.abs(np.cumsum(eigenvalues) - ratio))
-            self.get_pcs_index  = np.arange
+        #     self.find_threshold = lambda eigenvalues ,ratio: np.argmin(np.abs(np.cumsum(eigenvalues) - ratio))
+        #     self.get_pcs_index  = np.arange
 
-            if self.masking.strategy == "tvb": 
-                # what we keep
-                threshold = self.find_threshold(self.eigenvalues,self.masking.pc_ratio)
-                self.pc_mask = self.get_pcs_index(threshold)
+        #     if self.masking.strategy == "tvb": 
+        #         # what we keep
+        #         threshold = self.find_threshold(self.eigenvalues,self.masking.pc_ratio)
+        #         self.pc_mask = self.get_pcs_index(threshold)
 
-                # what we drop
-                self.pc_anti_mask = self.get_pcs_index(threshold,self.eigenvalues.shape[0])
+        #         # what we drop
+        #         self.pc_anti_mask = self.get_pcs_index(threshold,self.eigenvalues.shape[0])
 
-            elif self.masking.strategy == "sampling":
-                self.pc_mask_options = {}
-                self.nb_shuffle = 20
-                for i in range(self.nb_shuffle):
-                    self.pc_mask_options[i] = self.get_pcs_index(self.find_threshold(random.shuffle(self.eigenvalues),self.masking.pc_ratio))
+        #     elif self.masking.strategy == "sampling":
+        #         self.pc_mask_options = {}
+        #         self.nb_shuffle = 20
+        #         for i in range(self.nb_shuffle):
+        #             self.pc_mask_options[i] = self.get_pcs_index(self.find_threshold(random.shuffle(self.eigenvalues),self.masking.pc_ratio))
                 
 
     def __len__(self):
@@ -62,25 +62,25 @@ class PairedDataset(Dataset):
 
         if self.masking.type == "pixel":
             img2 = img1
-        elif self.masking.type == "pc":
-            if self.masking.strategy == "sampling":
-                # option_nb = random.randint(0,self.nb_shuffle)
-                # self.pc_mask = self.get_pcs_index(self.find_threshold(self.pc_mask_options[option_nb],self.masking.pc_ratio))
-                # self.pc_anti_mask = 
-                raise NotImplementedError
+        # elif self.masking.type == "pc":
+        #     if self.masking.strategy == "sampling":
+        #         # option_nb = random.randint(0,self.nb_shuffle)
+        #         # self.pc_mask = self.get_pcs_index(self.find_threshold(self.pc_mask_options[option_nb],self.masking.pc_ratio))
+        #         # self.pc_anti_mask = 
+        #         raise NotImplementedError
 
-            elif self.masking.strategy == "tvb_dynamic":
-                dynamic_ratio = random.randint(int(np.ceil(100*self.eigenvalues[0])), 100)/100
-                threshold     = self.find_threshold(self.eigenvalues,dynamic_ratio)
+        #     elif self.masking.strategy == "tvb_dynamic":
+        #         dynamic_ratio = random.randint(int(np.ceil(100*self.eigenvalues[0])), 100)/100
+        #         threshold     = self.find_threshold(self.eigenvalues,dynamic_ratio)
 
-                self.pc_mask      = self.get_pcs_index(threshold)
-                self.pc_anti_mask = self.get_pcs_index(threshold,self.eigenvalues.shape[0])
+        #         self.pc_mask      = self.get_pcs_index(threshold)
+        #         self.pc_anti_mask = self.get_pcs_index(threshold,self.eigenvalues.shape[0])
 
-            P   = self.pc_matrix[:,self.pc_anti_mask]
-            img2 = (img1.reshape(-1) @ P @ P.T).reshape(original_shape)
+        #     P   = self.pc_matrix[:,self.pc_anti_mask]
+        #     img2 = (img1.reshape(-1) @ P @ P.T).reshape(original_shape)
 
-            P = self.pc_matrix[:,self.pc_mask]
-            img1 = (img1.reshape(-1) @ P @ P.T).reshape(original_shape)
+        #     P = self.pc_matrix[:,self.pc_mask]
+        #     img1 = (img1.reshape(-1) @ P @ P.T).reshape(original_shape)
 
         else: raise NotImplementedError
 
@@ -91,7 +91,6 @@ class DataModule(pl.LightningDataModule):
         self,
         data,
         masking, 
-        extra_data =None,
         batch_size: int = 512,
         num_workers: int = 8,
         classes: int =10,
@@ -105,7 +104,6 @@ class DataModule(pl.LightningDataModule):
         self.input_channels = channels
         self.image_size = resolution
         self.masking = masking
-        self.extra_data = extra_data
 
         self.datasets = data
 
@@ -113,7 +111,7 @@ class DataModule(pl.LightningDataModule):
         self.train_dataset = PairedDataset(
             dataset=self.datasets["train"],
             masking=self.masking,
-            extra_data=self.extra_data)
+            )
 
         self.val_dataset = self.datasets["val"]
         self.num_val_samples = len(self.val_dataset)
@@ -121,12 +119,12 @@ class DataModule(pl.LightningDataModule):
 
     def train_dataloader(self) -> DataLoader:
         training_loader = DataLoader(
-            self.train_dataset, batch_size=self.batch_size, shuffle=True, drop_last=False
+            self.train_dataset, batch_size=self.batch_size, shuffle=True, drop_last=False, num_workers=self.num_workers
         )
         return training_loader
 
     def val_dataloader(self):
         loader = DataLoader(
-            self.val_dataset, batch_size=self.batch_size, shuffle=False, drop_last=False
+            self.val_dataset, batch_size=self.batch_size, shuffle=False, drop_last=False, num_workers=self.num_workers
         )
         return loader

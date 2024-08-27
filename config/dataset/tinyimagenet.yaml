@@ -7,7 +7,6 @@ data:
   mean: [0.485, 0.456, 0.406]
   std: [0.229, 0.224, 0.225]
   classes: 200
-  patch: 8
 
 datasets:
   train:
@@ -25,30 +24,17 @@ datasets:
     root: ${base_data_home}/tiny-imagenet-200/val
     transform: ${transformation.val}
 
-extradata:
-  pcamodule:
-    _target_ : numpy.load
-    file: ${base_data_home}/tiny-imagenet-200/pc_matrix.npy
-
-  eigenmodule:
-    _target_: numpy.load
-    file: ${base_data_home}/tiny-imagenet-200/eigenvalues.npy
-
-  eigenratiomodule:
-    _target_: numpy.load
-    file: ${base_data_home}/tiny-imagenet-200/eigenvalues_ratio.npy
-
 datamodule: 
   _target_: dataset.dataloader.DataModule
   batch_size: 512
-  num_workers: 8
+  num_workers: 16
   classes: ${data.classes}
   channels: ${data.channels}
   resolution: ${data.resolution}
 
 datamodule_eval:
   _target_: dataset.dataloader.DataModule
-  batch_size: 4096
+  batch_size: 512
   num_workers: ${datamodule.num_workers}
   classes: ${data.classes}
   channels: ${data.channels}

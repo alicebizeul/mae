@@ -11,13 +11,8 @@ pl_module:
   optimizer_name: adamw_warmup
   warmup: 40
   eval_freq: 100
-  learning_rate:
-    _target_: numpy.prod
-    x: ${pl_module.base_learning_rate}
-    y:
-      _target_: numpy.divide
-      x: ${datamodule.batch_size}
-      y: 256
+  learning_rate: ${compute_lr:${pl_module_eval.base_learning_rate},${datamodule_eval.batch_size}}
+
 
 
 pl_module_eval:
@@ -27,13 +22,8 @@ pl_module_eval:
   weight_decay: 0
   optimizer_name: sgd
   warmup: 10
-    learning_rate:
-    _target_: numpy.prod
-    x: ${pl_module_eval.base_learning_rate}
-    y:
-      _target_: numpy.divide
-      x: ${datamodule_eval.batch_size}
-      y: 256
+  learning_rate: ${compute_lr:${pl_module_eval.base_learning_rate},${datamodule_eval.batch_size}}
+
 
 
 module_config: 
@@ -44,6 +34,6 @@ module_config:
   norm_pix_loss: True
   attn_implementation: "eager"
   mask_ratio: ${masking.pixel_ratio}
-  patch_size: ${data.patch}
+  patch_size: ${data.patch_size}
   image_size: ${data.resolution}
 

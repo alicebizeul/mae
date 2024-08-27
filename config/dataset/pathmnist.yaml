@@ -33,23 +33,18 @@ datasets:
     size: ${data.resolution}
     transform: ${transformation.train}
 
-extradata:
-  pcamodule:
-    _target_ : numpy.load
-    file: ${base_data_home}/medmnist/pathmnist_pc_matrix.npy
-
-  eigenmodule:
-    _target_: numpy.load
-    file: ${base_data_home}/medmnist/pathmnist_eigenvalues.npy
-
-  eigenratiomodule:
-    _target_: numpy.load
-    file: ${base_data_home}/medmnist/pathmnist_eigenvalues_ratio.npy
-
 datamodule: 
   _target_: dataset.dataloader.DataModule
   batch_size: 512
-  num_workers: 8
+  num_workers: 16
+  classes: ${data.classes}
+  channels: ${data.channels}
+  resolution: ${data.resolution}
+
+datamodule_eval:
+  _target_: dataset.dataloader.DataModule
+  batch_size: 512
+  num_workers: ${datamodule.num_workers}
   classes: ${data.classes}
   channels: ${data.channels}
   resolution: ${data.resolution}
