@@ -7,5 +7,7 @@ defaults:
   - masking: mae
   - model: vit-t
   - mode: local
+  - transformations: mae
   - experiment: mae_tiny
-  - transformation: mae
+  - checkpoint: scratch
+  - trainer: train_eval

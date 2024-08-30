@@ -11,15 +11,16 @@ pl_module:
   optimizer_name: adamw_warmup
   warmup: 40
   eval_freq: 100
-  learning_rate: ${compute_lr:${pl_module_eval.base_learning_rate},${datamodule_eval.batch_size}}
+  learning_rate: ${compute_lr:${pl_module.base_learning_rate},${datamodule.batch_size}}
 
 pl_module_eval:
   _target_: model.module_eval.ViTMAE_eval
-  learning_rate: 0.1
+  base_learning_rate: 0.1
   betas: 0.9
   weight_decay: 0
   optimizer_name: sgd
   warmup: 10
+  learning_rate: ${compute_lr:${pl_module_eval.base_learning_rate},${datamodule_eval.batch_size}}
 
 module_config: 
   _target_: transformers.ViTMAEConfig

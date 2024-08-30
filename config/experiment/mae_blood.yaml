@@ -5,10 +5,3 @@ defaults:
   - override /model: vit-t
   - override /masking: mae
 
-trainer:
-  max_epochs: 600
-
-evaluator:
-  max_epochs: 100
-
-

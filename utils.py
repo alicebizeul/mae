@@ -24,6 +24,7 @@ from omegaconf import OmegaConf, DictConfig
 import yaml
 import submitit
 import git
+from hydra.utils import instantiate
 from pathlib import Path
 
 def setup_wandb(
@@ -126,6 +127,21 @@ def find_existing_checkpoint(dirpath: str) -> Optional[str]:
         print(f"resuming from existing checkpoint: {ckpt}")
         return ckpt
     return None
+
+def load_checkpoints(model, config):
+    if config.f is not None: 
+        print("------------------ Trying to load checkpoint from",config.f)
+        try:
+            model.load_state_dict(instantiate(config)["state_dict"],strict=False)
+            attempt=1
+        except:
+            try:
+                model.load_state_dict(instantiate(config)["model_state_dict"],strict=False)
+                attempt = 2
+            except:
+                attempt=3
+        print('------------------ Loaded checkpoint following attempt',attempt," - model is ",type(model))
+    return model 
 
 # Define the function to save images and their reconstructions
 def save_reconstructed_images(input, target, reconstructed, epoch, output_dir, name):

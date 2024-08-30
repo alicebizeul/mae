@@ -1,0 +1,11 @@
+# @package _global_
+
+trainer:
+  max_epochs: 0
+
+evaluator:
+  max_epochs: 100
+
+# overriding so that we get where we were if only just evaluating a run
+logs_dir: ${base_logs_dir}/${checkpoint.run_path}
+local_dir: ${base_outputs_dir}/${checkpoint.run_path}

@@ -6,16 +6,16 @@ hydra/job_logging: colorlog
 hydra/hydra_logging: colorlog
 
 base_logs_dir: ${base_logs_home}/logs/${oc.env:USER}
+base_outputs_dir: ${base_logs_home}/outputs/${oc.env:USER}
 run_tag: debug
 logs_dir: ${base_logs_dir}/${run_tag}/${now:%Y-%m-%d_%H-%M-%S}
+local_dir: ${base_outputs_dir}/${run_tag}/${now:%Y-%m-%d_%H-%M-%S}
 checkpoint_dir: ${logs_dir}/checkpoints
 
 wandb_dir: ${base_logs_home}/wandb
 wandb_datadir : ${base_logs_home}/wandb/artifacts
 wandb_cachedir: ${base_logs_home}/.cache/wandb
 wandb_configdir: ${base_logs_home}/.config/wandb
-
-local_dir: ${base_logs_home}/outputs/${oc.env:USER}/${base_logs_dir}/${run_tag}/${now:%Y-%m-%d_%H-%M-%S}
 
 wandb:
   project: ${project}

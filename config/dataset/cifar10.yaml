@@ -1,29 +1,35 @@
 # @package _global_
 
 data:
-  name: tinyimagenet
-  resolution: 64
+  name: cifar10
+  resolution: 32
   channels: 3
   patch_size: 8
-  str_patch_size: ${convert_str:${data.patch_size}}
-  mean: [0.485, 0.456, 0.406]
-  std: [0.229, 0.224, 0.225]
-  classes: 200
+  str_patch_size:  ${convert_str:${data.patch_size}}
+  mean: [0.4914, 0.4822, 0.4465]
+  std: [0.247, 0.243, 0.261]
+  classes: 10
 
 datasets:
   train:
-    _target_: torchvision.datasets.ImageFolder
-    root: ${base_data_home}/tiny-imagenet-200/train
+    _target_: torchvision.datasets.CIFAR10
+    root: ${base_data_home}/
+    train: True
+    download: ${download}
     transform: ${transformation.train}
 
   val:
-    _target_: torchvision.datasets.ImageFolder
-    root: ${base_data_home}/tiny-imagenet-200/val
+    _target_: torchvision.datasets.CIFAR10
+    root: ${base_data_home}/
+    train: False
+    download: ${download}
     transform: ${transformation.val}
 
   test:
-    _target_: torchvision.datasets.ImageFolder
-    root: ${base_data_home}/tiny-imagenet-200/val
+    _target_: torchvision.datasets.CIFAR10
+    root: ${base_data_home}/
+    train: False
+    download: ${download}
     transform: ${transformation.val}
 
 datamodule: 

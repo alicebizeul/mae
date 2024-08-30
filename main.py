@@ -3,6 +3,9 @@ from hydra.utils import instantiate
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 
+import torchvision
+import torchvision.datasets
+from torchvision.datasets import CIFAR10
 import pytorch_lightning as pl
 import torch.nn.functional as F
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -26,13 +29,18 @@ from transformers import ViTMAEConfig
 from utils import (
     print_config,
     setup_wandb,
-    get_git_hash
+    get_git_hash,
+    load_checkpoints
 )
 
 # Configure logging
 log = logging.getLogger(__name__)
 git_hash = get_git_hash()
 OmegaConf.register_new_resolver("compute_lr", lambda base_lr, batch_size: base_lr * (batch_size / 256))
+OmegaConf.register_new_resolver("decimal_2_percent", lambda decimal: int(100*decimal))
+OmegaConf.register_new_resolver("convert_str", lambda number: "_"+str(number))
+OmegaConf.register_new_resolver("substract_one", lambda number: number-1)
+
 
 # Main function
 @hydra.main(version_base="1.2", config_path="config", config_name="train_defaults.yaml")
@@ -62,7 +70,8 @@ def main(config: DictConfig) -> None:
         datamodule = datamodule,
         save_dir=config.local_dir
         )
-    
+    model_train = load_checkpoints(model_train, config.checkpoint_fn)
+
     # Model checkpointing
     checkpoint_callback = ModelCheckpoint(
         dirpath=config.checkpoint_dir,  # Directory where to save the checkpoints
@@ -82,7 +91,9 @@ def main(config: DictConfig) -> None:
             callbacks=[checkpoint_callback],
             check_val_every_n_epoch=config.pl_module.eval_freq
         )
+    print("------------------------- Start Training")
     trainer.fit(model_train, datamodule=datamodule)
+    print("------------------------- End Training")
 
 
     # Final evaluation: original data, no pixel or pc masking, MAE eval protocol
@@ -105,7 +116,9 @@ def main(config: DictConfig) -> None:
             enable_checkpointing = False,
             num_sanity_val_steps=0
         )
+    print("------------------------- Start Evaluation")
     evaluator.fit(model_eval, datamodule=datamodule)
+    print("------------------------- End Evaluation")
 
 if __name__ == "__main__":
     main()
