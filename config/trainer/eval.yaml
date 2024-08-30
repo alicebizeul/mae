@@ -1,5 +1,8 @@
 # @package _global_
 
+defaults:
+  - override /checkpoint: pretrained
+
 trainer:
   max_epochs: 0
 
