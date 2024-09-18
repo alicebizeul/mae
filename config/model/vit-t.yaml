@@ -21,7 +21,8 @@ pl_module_eval:
   optimizer_name: sgd
   warmup: 10
   learning_rate: ${compute_lr:${pl_module_eval.base_learning_rate},${datamodule_eval.batch_size}}
-
+  evaluated_epoch: ${evaluated_epoch}
+  
 module_config: 
   _target_: transformers.ViTMAEConfig
   hidden_size: 192

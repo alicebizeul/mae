@@ -1,42 +1,42 @@
 # @package _global_
 
 data:
-  name: tinyimagenet
-  resolution: 64
+  name: clevr
+  resolution: 224
   channels: 3
-  patch_size: 8
-  str_patch_size: ${convert_str:${data.patch_size}}
+  patch_size: 16
+  str_patch_size:  ${convert_str:${data.patch_size}}
   mean: 
     _target_: torch.tensor
     data: 
       _target_: numpy.load
-      file: ${datasets.train.root}/mean_reshaped.npy
+      file: ${datasets.train.root}/cifar-10-batches-py/mean_reshaped.npy
   std: 
     _target_: torch.tensor
     data: 
       _target_: numpy.load
-      file: ${datasets.train.root}/std_reshaped.npy
-  classes: 200
+      file: ${datasets.train.root}/cifar-10-batches-py/std_reshaped.npy
+  classes: 10
 
 datasets:
   train:
-    _target_: torchvision.datasets.ImageFolder
-    root: ${base_data_home}/tiny-imagenet-200/train
+    _target_: CLEVRCustomDataset
+    root: ${base_data_home}/CLEVR_v1.0/images/train
     transform: ${transformation.train}
 
   val:
-    _target_: torchvision.datasets.ImageFolder
-    root: ${base_data_home}/tiny-imagenet-200/val
+    _target_: CLEVRCustomDataset
+    root: ${base_data_home}/CLEVR_v1.0/images/validation
     transform: ${transformation.val}
 
   test:
-    _target_: torchvision.datasets.ImageFolder
-    root: ${base_data_home}/tiny-imagenet-200/val
+    _target_: CLEVRCustomDataset
+    root: ${base_data_home}/CLEVR_v1.0/images/test
     transform: ${transformation.val}
 
 datamodule: 
   _target_: dataset.dataloader.DataModule
-  batch_size: 512
+  batch_size: 128
   num_workers: 8
   classes: ${data.classes}
   channels: ${data.channels}
@@ -44,18 +44,18 @@ datamodule:
 
 datamodule_eval:
   _target_: dataset.dataloader.DataModule
-  batch_size: 512
+  batch_size: 128
   num_workers: ${datamodule.num_workers}
   classes: ${data.classes}
   channels: ${data.channels}
   resolution: ${data.resolution}
 
-
 extradata:
   pcamodule:
     _target_ : numpy.load
-    file: ${base_data_home}/tiny-imagenet-200/train/pc_matrix.npy
+    file: ${base_data_home}/cifar-10-batches-py/pc_matrix.npy
 
   eigenratiomodule:
     _target_: numpy.load
-    file: ${base_data_home}/tiny-imagenet-200/train/eigenvalues_ratio.npy
+    file: ${base_data_home}/cifar-10-batches-py/eigenvalues_ratio.npy
+

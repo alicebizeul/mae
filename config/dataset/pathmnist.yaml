@@ -6,8 +6,16 @@ data:
   channels: 3
   patch_size: 8
   str_patch_size: ${convert_str:${data.patch_size}}
-  mean: [0.485, 0.456, 0.406]
-  std: [0.229, 0.224, 0.225]
+  mean: 
+    _target_: torch.tensor
+    data: 
+      _target_: numpy.load
+      file: ${datasets.train.root}/pathmnist_mean_reshaped.npy
+  std: 
+    _target_: torch.tensor
+    data: 
+      _target_: numpy.load
+      file: ${datasets.train.root}/pathmnist_std_reshaped.npy
   classes: 9
 
 datasets:
@@ -50,3 +58,13 @@ datamodule_eval:
   classes: ${data.classes}
   channels: ${data.channels}
   resolution: ${data.resolution}
+
+
+extradata:
+  pcamodule:
+    _target_ : numpy.load
+    file: ${base_data_home}/medmnist/pathmnist_pc_matrix.npy
+
+  eigenratiomodule:
+    _target_: numpy.load
+    file: ${base_data_home}/medmnist/pathmnist_eigenvalues_ratio.npy

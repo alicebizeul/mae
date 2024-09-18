@@ -1,8 +1,9 @@
 # @package _global_
 
 defaults:
-  - override /dataset: tinyimagenet
+  - override /dataset: dermamnist
   - override /model: vit-t
-  - override /masking: pc_tvb
+  - override /masking: random_sampling
   - override /transformations: mae_adapted
+
 

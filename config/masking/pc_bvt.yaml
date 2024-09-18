@@ -2,7 +2,7 @@
 
 masking:
   type: pc
-  strategy: tvb
+  strategy: bvt
   pc_ratio: 0.8
   pixel_ratio: 0.0
   ratio:  ${decimal_2_percent:${masking.pc_ratio}}

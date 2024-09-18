@@ -3,4 +3,4 @@
 defaults:
   - override /dataset: cifar10
   - override /model: vit-t
-  - override /masking: mae
+  - override /masking: mae_sampling

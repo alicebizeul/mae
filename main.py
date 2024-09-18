@@ -24,23 +24,27 @@ from model.module import ViTMAE
 from model.module_eval import ViTMAE_eval
 from model.vit_mae import ViTMAEForPreTraining
 from dataset.dataloader import DataModule
+from dataset.clevr import CLEVRCustomDataset
 import transformers
 from transformers import ViTMAEConfig
 from utils import (
     print_config,
     setup_wandb,
     get_git_hash,
-    load_checkpoints
+    load_checkpoints,
+    Normalize
 )
 
 # Configure logging
 log = logging.getLogger(__name__)
 git_hash = get_git_hash()
+def create_lambda_transform(mean, std):
+    return torchvision.transforms.Lambda(lambda sample: (sample - mean) / std)
 OmegaConf.register_new_resolver("compute_lr", lambda base_lr, batch_size: base_lr * (batch_size / 256))
-OmegaConf.register_new_resolver("decimal_2_percent", lambda decimal: int(100*decimal))
+OmegaConf.register_new_resolver("decimal_2_percent", lambda decimal: int(100*decimal) if decimal is not None else decimal)
 OmegaConf.register_new_resolver("convert_str", lambda number: "_"+str(number))
 OmegaConf.register_new_resolver("substract_one", lambda number: number-1)
-
+OmegaConf.register_new_resolver('to_tuple', lambda a, b, c: (a,b,c))
 
 # Main function
 @hydra.main(version_base="1.2", config_path="config", config_name="train_defaults.yaml")
@@ -59,6 +63,7 @@ def main(config: DictConfig) -> None:
         config.datamodule,
         data = config.datasets,
         masking = config.masking,
+        extra_data = config.extradata
     )
     
     # Creating model

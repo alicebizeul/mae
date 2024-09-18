@@ -1,8 +1,8 @@
 # @package _global_
 
 defaults:
-  - override /dataset: tinyimagenet
+  - override /dataset: pathmnist
   - override /model: vit-t
-  - override /masking: pc_tvb
+  - override /masking: pc_bvt
   - override /transformations: mae_adapted
 

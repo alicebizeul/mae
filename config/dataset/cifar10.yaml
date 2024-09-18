@@ -6,8 +6,16 @@ data:
   channels: 3
   patch_size: 8
   str_patch_size:  ${convert_str:${data.patch_size}}
-  mean: [0.4914, 0.4822, 0.4465]
-  std: [0.247, 0.243, 0.261]
+  mean: 
+    _target_: torch.tensor
+    data: 
+      _target_: numpy.load
+      file: ${datasets.train.root}/cifar-10-batches-py/mean_reshaped.npy
+  std: 
+    _target_: torch.tensor
+    data: 
+      _target_: numpy.load
+      file: ${datasets.train.root}/cifar-10-batches-py/std_reshaped.npy
   classes: 10
 
 datasets:
@@ -47,3 +55,13 @@ datamodule_eval:
   classes: ${data.classes}
   channels: ${data.channels}
   resolution: ${data.resolution}
+
+extradata:
+  pcamodule:
+    _target_ : numpy.load
+    file: ${base_data_home}/cifar-10-batches-py/pc_matrix.npy
+
+  eigenratiomodule:
+    _target_: numpy.load
+    file: ${base_data_home}/cifar-10-batches-py/eigenvalues_ratio.npy
+

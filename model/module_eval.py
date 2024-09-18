@@ -30,6 +30,7 @@ class ViTMAE_eval(pl.LightningModule):
         warmup: int =10,
         datamodule: Optional[pl.LightningDataModule] = None,
         save_dir: str =None,
+        evaluated_epoch: int =800
     ):
         super().__init__()
         self.learning_rate = learning_rate
@@ -40,6 +41,7 @@ class ViTMAE_eval(pl.LightningModule):
         self.num_classes = datamodule.num_classes
         self.image_size = datamodule.image_size
         self.warm_up = warmup
+        self.evaluated_epoch = evaluated_epoch
 
         model.delete_decoder()
         self.model = model
@@ -65,17 +67,17 @@ class ViTMAE_eval(pl.LightningModule):
 
     def shared_step(self, batch: Tensor, stage: str = "train", batch_idx: int =None):
         if stage == "train":
-            img, _, y = batch
+            img, y, _ = batch
 
             cls, _ = self.model(img,return_rep=True)
             logits = self.classifier(cls.detach())
             loss_ce = self.online_classifier_loss(logits,y.squeeze())
-            self.log(f"final_{stage}_classifier_loss", loss_ce, sync_dist=True)
+            self.log(f"final_{stage}_classifier_loss_{self.evaluated_epoch}", loss_ce, sync_dist=True)
 
             accuracy_metric = getattr(self, f"online_{stage}_accuracy")
             accuracy_metric(F.softmax(logits, dim=-1), y.squeeze())
             self.log(
-                f"final_{stage}_accuracy",
+                f"final_{stage}_accuracy_{self.evaluated_epoch}",
                 accuracy_metric,
                 prog_bar=False,
                 sync_dist=True,
@@ -85,7 +87,7 @@ class ViTMAE_eval(pl.LightningModule):
             self.avg_train_losses.append(np.mean(self.train_losses))
 
             if (self.current_epoch+1)%10==0 and batch_idx==0:
-                plot_loss(self.avg_train_losses,name_loss="X-Entropy",save_dir=self.save_dir,name_file="_eval_train")
+                plot_loss(self.avg_train_losses,name_loss="X-Entropy",save_dir=self.save_dir,name_file=f"_eval_train_{self.evaluated_epoch}")
 
             return  loss_ce
 
@@ -98,7 +100,7 @@ class ViTMAE_eval(pl.LightningModule):
             accuracy_metric = getattr(self, f"online_{stage}_accuracy")
             accuracy_metric(F.softmax(logits, dim=-1), y.squeeze())
             self.log(
-                f"final_{stage}_accuracy",
+                f"final_{stage}_accuracy_{self.evaluated_epoch}",
                 accuracy_metric,
                 prog_bar=True,
                 sync_dist=True,
@@ -117,19 +119,19 @@ class ViTMAE_eval(pl.LightningModule):
                 att_map_spatial = torch.mean(attentions[:,1:,1:],dim=-1)
                 att_map_cls = att_map_cls.reshape([img.shape[0],int(np.sqrt(att_map_cls.shape[-1])),int(np.sqrt(att_map_cls.shape[-1]))])
                 att_map_spatial = att_map_spatial.reshape([img.shape[0],int(np.sqrt(att_map_spatial.shape[-1])),int(np.sqrt(att_map_spatial.shape[-1]))])
-                save_attention_maps(img[:10],att_map_cls[:10].unsqueeze(1),att_map_spatial[:10].unsqueeze(1),self.current_epoch+1, self.save_dir,"eval")
-                save_attention_maps_batch(att_map_cls=att_map_cls,att_map_spatial=att_map_spatial,epoch=self.current_epoch+1, output_dir=self.save_dir,name="eval")
+                save_attention_maps(img[:10],att_map_cls[:10].unsqueeze(1),att_map_spatial[:10].unsqueeze(1),self.current_epoch+1, self.save_dir,f"eval_{self.evaluated_epoch}")
+                save_attention_maps_batch(att_map_cls=att_map_cls,att_map_spatial=att_map_spatial,epoch=self.current_epoch+1, output_dir=self.save_dir,name=f"eval_{self.evaluated_epoch}")
 
             return None    
 
     def on_validation_epoch_end(self):
         self.performance[self.current_epoch+1] = sum(self.performance[self.current_epoch+1])/self.datamodule.num_val_samples
         if (self.current_epoch+1)%10 == 0:
-            plot_performance(list(self.performance.keys()),list(self.performance.values()),self.save_dir,name="val_final")
+            plot_performance(list(self.performance.keys()),list(self.performance.values()),self.save_dir,name=f"val_final_{self.evaluated_epoch}")
 
     def on_fit_end(self):
         # Write to a CSV file
-        with open(os.path.join(self.save_dir,'performance_final.csv'), 'w', newline='') as csvfile:
+        with open(os.path.join(self.save_dir,f'performance_final_{self.evaluated_epoch}.csv'), 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(['Eval Epoch', 'Test Accuracy'])
             for epoch in list(self.performance.keys()):

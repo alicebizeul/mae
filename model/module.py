@@ -11,6 +11,7 @@ from torchvision.models import resnet18
 from torch import Tensor
 import wandb
 import os 
+import time
 import matplotlib.pyplot as plt
 import numpy as np
 from utils import save_reconstructed_images, save_attention_maps, save_attention_maps_batch
@@ -42,8 +43,15 @@ class ViTMAE(pl.LightningModule):
         self.classifier_lr = learning_rate
         self.warm_up = warmup
         self.eval_freq = eval_freq
+        self.masking = datamodule.masking
 
         self.model = model
+
+        if self.masking.type == "pc":
+            self.register_buffer("masking_fn",torch.Tensor(self.datamodule.extra_data.pcamodule.T))
+        elif self.masking.type == "random":
+            self.register_buffer("masking_fn",nn.Linear())
+
         self.classifier = nn.Linear(model.config.hidden_size, self.num_classes)
 
         self.online_classifier_loss = nn.CrossEntropyLoss()
@@ -61,18 +69,49 @@ class ViTMAE(pl.LightningModule):
         self.performance = {}
 
     def forward(self, x):
-        return self.model(x)
+        return self.model(self.transformation(x))
 
     def shared_step(self, batch: Tensor, stage: str = "train", batch_idx: int =None):
         if stage == "train":
-            img, target, y = batch
-
+            img, y, pc_mask = batch
+            
             # mae training
+            if self.masking.type == "pc":
+                # if self.masking.strategy in ["bvt","tvb"]:
+                pc_mask = pc_mask[0]
+                target  = (img.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask] @ self.masking_fn[:,pc_mask].T).reshape(img.shape)
+
+                if self.masking.strategy == "tvb":
+                    pc_mask = torch.arange(pc_mask[0])
+                if self.masking.strategy == "bvt":
+                    pc_mask = torch.arange(pc_mask[-1]+1,self.masking_fn.shape[-1])
+                if self.masking.strategy in ["sampling_pc","sampling_ratio"]:
+                    indexes = torch.arange(self.masking_fn.shape[1]).to(img.device)
+                    pc_mask = indexes[~torch.isin(indexes,pc_mask[pc_mask!=-1])]
+
+                img     = (img.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask] @ self.masking_fn[:,pc_mask].T).reshape(img.shape)
+                # elif self.masking.strategy in ["sampling_pc","sampling_ratio"]:
+                #     target = []
+                    # for i in range(img.shape[0]):
+                    #     target.append((img[i].reshape([1,-1]) @ self.masking_fn[:,pc_mask[i][pc_mask[i]!=-1]] @ self.masking_fn[:,pc_mask[i][pc_mask[i]!=-1]].T).reshape(img.shape[1:]))
+                    # target = torch.stack(target,dim=0).view(img.shape)
+                    # for i in range(img.shape[0]):
+                    #     indexes = torch.arange(self.masking_fn.shape[1]).to(img.device)
+                    #     anti_mask = indexes[~torch.isin(indexes,pc_mask[i][pc_mask[i]!=-1])]
+                    #     img[i] = (img[i].reshape([1,-1]) @ self.masking_fn[:,anti_mask] @ self.masking_fn[:,anti_mask].T).reshape(img.shape[1:])
+            
+            elif self.masking.type == "pixel":
+                if self.masking.strategy == "sampling":
+                    self.model.config.mask_ratio = pc_mask[0]
+                    self.model.vit.embeddings.config.mask_ratio=pc_mask[0]
+                target = img
+
             outputs, cls = self.model(img,return_rep=False)
             reconstruction = self.model.unpatchify(outputs.logits)
             mask = outputs.mask.unsqueeze(-1).repeat(1, 1, self.model.config.patch_size**2 *3)  # (N, H*W, p*p*3)
             mask = self.model.unpatchify(mask)
             loss_mae = self.model.forward_loss(target,outputs.logits,outputs.mask)
+
             self.log(
                 f"{stage}_mae_loss", 
                 loss_mae, 
@@ -90,7 +129,7 @@ class ViTMAE(pl.LightningModule):
                 plot_loss(self.avg_online_losses,name_loss="X-Ent",save_dir=self.save_dir,name_file="_train_online_cls")
 
                 if self.model.config.mask_ratio > 0:
-                    save_reconstructed_images((-1*(mask[:10]-1))*img[:10],mask[:10]*target[:10], reconstruction[:10], self.current_epoch+1, self.save_dir,"train")
+                    save_reconstructed_images((-1*(mask[:10]-1))*img[:10],mask[:10]*img[:10], reconstruction[:10], self.current_epoch+1, self.save_dir,"train")
                 else:
                     save_reconstructed_images(img[:10], target[:10], reconstruction[:10], self.current_epoch+1, self.save_dir,"train")
 
@@ -99,6 +138,7 @@ class ViTMAE(pl.LightningModule):
             # online classifier
             logits_cls = self.classifier(cls.detach())
             loss_ce = self.online_classifier_loss(logits_cls,y.squeeze())
+            
             self.log(f"{stage}_classifier_loss", loss_ce, sync_dist=True)
             self.online_losses.append(loss_ce.item())
             self.avg_online_losses.append(np.mean(self.online_losses))
@@ -142,13 +182,6 @@ class ViTMAE(pl.LightningModule):
 
             return None
 
-    # def on_train_epoch_start(self):
-    #     # Check the current epoch and switch regimes every 100 epochs
-    #     if self.current_epoch % (self.eval_freq+self.eval_duration) < self.eval_freq:
-    #         self.classifier_training = False
-    #     else:
-    #         self.classifier_training = True    
-
     def on_validation_epoch_end(self):
         self.performance[self.current_epoch+1] = sum(self.performance[self.current_epoch+1])/self.datamodule.num_val_samples
         plot_performance(list(self.performance.keys()),list(self.performance.values()),self.save_dir,name="val")
@@ -166,8 +199,6 @@ class ViTMAE(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        print("This is the learning rate",self.learning_rate)
-
         def warmup(current_step: int):
             return 1 / (10 ** (float(num_warmup_epochs - current_step)))
 

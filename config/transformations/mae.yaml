@@ -18,19 +18,19 @@ transformation_train_list:
     _target_: torchvision.transforms.RandomHorizontalFlip
   tensor:
     _target_: torchvision.transforms.ToTensor
-  normalize:
-    _target_: torchvision.transforms.Normalize
+  normalize: 
+    _target_: utils.Normalize
     mean: ${data.mean}
     std: ${data.std}
 
 transformation_val_list:
   tensor:
     _target_: torchvision.transforms.ToTensor
-  normalize:
-    _target_: torchvision.transforms.Normalize
+  normalize: 
+    _target_: utils.Normalize
     mean: ${data.mean}
     std: ${data.std}
-
+    
 compose_train_transforms:
   - ${transformation_train_list.resize}
   - ${transformation_train_list.flip}
