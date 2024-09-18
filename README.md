@@ -16,7 +16,7 @@ Create a config file that suits your machine:
 Adjust the paths to point to the directory you would like to use for storage of results and for fetching the data
 
 ### Training
-To launch experiments, you can find a good example for training at  ```./script/jobs_euler_pcmae_random.sh``` and ```./script/jobs_euler_eval_pcmae_random.sh``` directory or run the following command to get started with training: 
+To launch experiments, you can find a good example for training at  ```./script/jobs_euler_pcmae_random.sh``` and ```./script/jobs_euler_eval_pcmae_random.sh``` for evaluation. Otherwise, you can run the following command to get started with training: 
 
     EXPERIMENT="mae_clevr"
     python main.py user=myusername_mymachine experiment=$EXPERIMENT run_tag=$EXPERIMENT"
