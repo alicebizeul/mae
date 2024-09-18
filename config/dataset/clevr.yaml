@@ -10,12 +10,12 @@ data:
     _target_: torch.tensor
     data: 
       _target_: numpy.load
-      file: ${datasets.train.root}/cifar-10-batches-py/mean_reshaped.npy
+      file: 
   std: 
     _target_: torch.tensor
     data: 
       _target_: numpy.load
-      file: ${datasets.train.root}/cifar-10-batches-py/std_reshaped.npy
+      file: 
   classes: 10
 
 datasets:
@@ -53,9 +53,9 @@ datamodule_eval:
 extradata:
   pcamodule:
     _target_ : numpy.load
-    file: ${base_data_home}/cifar-10-batches-py/pc_matrix.npy
+    file: 
 
   eigenratiomodule:
     _target_: numpy.load
-    file: ${base_data_home}/cifar-10-batches-py/eigenvalues_ratio.npy
+    file: 
 
