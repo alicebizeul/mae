@@ -100,30 +100,29 @@ class DataModule(pl.LightningDataModule):
         self.num_val_samples = len(self.val_dataset)
         self.test_dataset = self.datasets["test"]
 
-    # def collate_fn(self,batch):
-    #     """
-    #     Custom collate function to handle variable-sized pc_mask.
-    #     Pads the pc_mask to the size of the largest pc_mask in the batch.
-    #     """
+    def collate_fn(self,batch):
+        """
+        Custom collate function to handle variable-sized pc_mask.
+        Pads the pc_mask to the size of the largest pc_mask in the batch.
+        """
 
-    #     # Unpack the batch (which is a list of tuples)
-    #     imgs, labels, pc_masks = zip(*batch)
-    #     # Find the maximum length of pc_mask in this batch
-    #     max_len = max([pc_mask.size for pc_mask in pc_masks])
+        # Unpack the batch (which is a list of tuples)
+        imgs, labels, pc_masks = zip(*batch)
+        # Find the maximum length of pc_mask in this batch
+        max_len = max([pc_mask.size for pc_mask in pc_masks])
 
-    #     # Pad pc_masks to the same size
-    #     padded_pc_masks = [torch.nn.functional.pad(torch.tensor(pc_mask), (0, max_len - pc_mask.size),value=-1) for pc_mask in pc_masks]
-    #     # Stack images, labels, and padded pc_masks
-    #     imgs = torch.stack(imgs)  # Assuming images are tensors and can be stacked directly
-    #     labels = torch.tensor(labels)  # Convert labels to tensor
-    #     padded_pc_masks = torch.stack(padded_pc_masks)  # Stack the padded pc_masks
+        # Pad pc_masks to the same size
+        padded_pc_masks = [torch.nn.functional.pad(torch.tensor(pc_mask), (0, max_len - pc_mask.size),value=-1) for pc_mask in pc_masks]
+        # Stack images, labels, and padded pc_masks
+        imgs = torch.stack(imgs)  # Assuming images are tensors and can be stacked directly
+        labels = torch.tensor(labels)  # Convert labels to tensor
+        padded_pc_masks = torch.stack(padded_pc_masks)  # Stack the padded pc_masks
 
-    #     return imgs, labels, padded_pc_masks
-    #  collate_fn=self.collate_fn if self.masking.type == "pc" and self.masking.strategy in ["sampling_pc","sampling_ratio"] else None
+        return imgs, labels, padded_pc_masks
 
     def train_dataloader(self) -> DataLoader:
         training_loader = DataLoader(
-            self.train_dataset, batch_size=self.batch_size, shuffle=True, drop_last=False, num_workers=self.num_workers,
+            self.train_dataset, batch_size=self.batch_size, shuffle=True, drop_last=False, num_workers=self.num_workers, collate_fn=self.collate_fn if self.masking.type == "pc" and self.masking.strategy in ["sampling_pc","sampling_ratio"] else None
         )
         return training_loader
 

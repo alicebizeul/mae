@@ -5,6 +5,7 @@ data:
   resolution: 64
   channels: 3
   patch_size: 8
+  batch_size: 512
   str_patch_size: ${convert_str:${data.patch_size}}
   mean: 
     _target_: torch.tensor
@@ -36,7 +37,7 @@ datasets:
 
 datamodule: 
   _target_: dataset.dataloader.DataModule
-  batch_size: 512
+  batch_size: ${data.batch_size}
   num_workers: 8
   classes: ${data.classes}
   channels: ${data.channels}
@@ -44,7 +45,7 @@ datamodule:
 
 datamodule_eval:
   _target_: dataset.dataloader.DataModule
-  batch_size: 512
+  batch_size: ${data.batch_size}
   num_workers: ${datamodule.num_workers}
   classes: ${data.classes}
   channels: ${data.channels}

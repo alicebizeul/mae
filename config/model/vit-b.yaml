@@ -1,5 +1,10 @@
 # @package _global_
 
+datamodule:
+  batch_size: ${divide:${data.batch_size},2}
+datamodule_eval:
+  batch_size: ${divide:${data.batch_size},2}
+
 module:
   _target_: model.vit_mae.ViTMAEForPreTraining
 

@@ -40,6 +40,7 @@ log = logging.getLogger(__name__)
 git_hash = get_git_hash()
 def create_lambda_transform(mean, std):
     return torchvision.transforms.Lambda(lambda sample: (sample - mean) / std)
+OmegaConf.register_new_resolver('divide', lambda a, b: int(int(a)/b))
 OmegaConf.register_new_resolver("compute_lr", lambda base_lr, batch_size: base_lr * (batch_size / 256))
 OmegaConf.register_new_resolver("decimal_2_percent", lambda decimal: int(100*decimal) if decimal is not None else decimal)
 OmegaConf.register_new_resolver("convert_str", lambda number: "_"+str(number))
@@ -124,6 +125,14 @@ def main(config: DictConfig) -> None:
     print("------------------------- Start Evaluation")
     evaluator.fit(model_eval, datamodule=datamodule)
     print("------------------------- End Evaluation")
+
+
+    # KNN evaluation
+#    for n in [3,4,5,6,7,8,9,10,11,12]:
+#     model_eval = sklearn.neighbors.KNeighborsClassifier(n_neighbors=n) 
+#     model_eval.fit()
+#     model_eval.predict()
+
 
 if __name__ == "__main__":
     main()
