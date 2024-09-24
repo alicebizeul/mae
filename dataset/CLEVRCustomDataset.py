@@ -92,18 +92,14 @@ class CLEVRCustomDataset(Dataset):
         return len(self.split_indices)
 
     def seg_to_binary_mask(self, idx, view=0):
-        # masks = []
-        # for i in range(11):
-        mp = f"{self.data_dir}/masks/{self.split_indices[idx]}_{0}.png"
-        m = mask_tf(Image.open(mp))
-        #     random.seed(seed)
-        #     torch.manual_seed(seed)
-        #     # mask_t = self.transform(m, no_color=True)[view] \
-        #     #     if self.split == 'train' else self.transform(m)
-        #     masks.append(self.morph_fn(m))
-        # final_mask = torch.stack(masks)[1:, ...]
+        masks = []
+        for i in range(11):
+            mp = f"{self.data_dir}/masks/{self.split_indices[idx]}_{i}.png"
+            m = mask_tf(Image.open(mp))
+            masks.append(self.morph_fn(m))
+        final_mask = torch.stack(masks)[1:, ...]
         mask = torch.zeros_like(m)
-        mask[m > 0.5] = 1.
+        mask[final_mask > 0.5] = 1.
         return mask
 
     def __getitem__(self, idx):
