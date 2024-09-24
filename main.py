@@ -24,7 +24,7 @@ from model.module import ViTMAE
 from model.module_eval import ViTMAE_eval
 from model.vit_mae import ViTMAEForPreTraining
 from dataset.dataloader import DataModule
-from dataset.clevr import CLEVRCustomDataset
+from dataset.CLEVRCustomDataset import CLEVRCustomDataset
 import transformers
 from transformers import ViTMAEConfig
 from utils import (
@@ -50,7 +50,7 @@ OmegaConf.register_new_resolver('to_tuple', lambda a, b, c: (a,b,c))
 # Main function
 @hydra.main(version_base="1.2", config_path="config", config_name="train_defaults.yaml")
 def main(config: DictConfig) -> None:
-
+    
     # Setup 
     print_config(config)
     pl.seed_everything(config.seed)

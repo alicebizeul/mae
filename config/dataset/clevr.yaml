@@ -4,7 +4,7 @@ data:
   name: clevr
   resolution: 224
   channels: 3
-  batch_size: 128
+  batch_size: 64
   patch_size: 16
   str_patch_size:  ${convert_str:${data.patch_size}}
   mean: 
@@ -21,19 +21,33 @@ data:
 
 datasets:
   train:
-    _target_: CLEVRCustomDataset
-    root: ${base_data_home}/CLEVR_v1.0/images/train
-    transform: ${transformation.train}
+    _target_: dataset.CLEVRCustomDataset.CLEVRCustomDataset
+    root: ${base_data_home}
+    # transform: ${transformation.train}
+    transform: None
+    split: "train"
+    morph: "none"
+    load_masks: True
+    #transform: ${transformation.train}
 
   val:
-    _target_: CLEVRCustomDataset
-    root: ${base_data_home}/CLEVR_v1.0/images/validation
-    transform: ${transformation.val}
+    _target_: dataset.CLEVRCustomDataset.CLEVRCustomDataset
+    root: ${base_data_home}
+    # transform: ${transformation.val}
+    transform: None
+    split: "val"
+    morph: "none"
+    load_masks: True
 
   test:
-    _target_: CLEVRCustomDataset
-    root: ${base_data_home}/CLEVR_v1.0/images/test
-    transform: ${transformation.val}
+    _target_: dataset.CLEVRCustomDataset.CLEVRCustomDataset
+    root: ${base_data_home}
+    # transform: ${transformation.val}
+    transform: None
+    split: "test"
+    morph: "none"
+    load_masks: True
+    # transform: ${transformation.val}
 
 datamodule: 
   _target_: dataset.dataloader.DataModule
@@ -54,9 +68,11 @@ datamodule_eval:
 extradata:
   pcamodule:
     _target_ : numpy.load
-    file: 
+    file: ${base_data_home}/cifar-10-batches-py/pc_matrix.npy
+    # file: ""
 
   eigenratiomodule:
     _target_: numpy.load
-    file: 
+    file: ${base_data_home}/cifar-10-batches-py/pc_matrix.npy
+    # file: ""
 

@@ -64,6 +64,11 @@ class PairedDataset(Dataset):
         elif self.masking.type == "pixel":
             if self.masking.strategy == "sampling":
                 pc_mask = float(np.random.randint(50,90,1)[0]/100)            
+        elif self.masking.type == "segmentation":
+            pc_mask = y[1]
+            pc_mask = 0.75
+            y = y[0]
+
 
         return img1, y, pc_mask
 
