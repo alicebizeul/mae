@@ -17,7 +17,7 @@ from utils import save_reconstructed_images, save_attention_maps, save_attention
 from plotting import plot_loss, plot_performance
 import csv
 
-class ViTMAE_eval(pl.LightningModule):
+class ViTMAE_lin(pl.LightningModule):
 
     def __init__(
         self,
@@ -72,12 +72,12 @@ class ViTMAE_eval(pl.LightningModule):
             cls, _ = self.model(img,return_rep=True)
             logits = self.classifier(cls.detach())
             loss_ce = self.online_classifier_loss(logits,y.squeeze())
-            self.log(f"final_{stage}_classifier_loss_{self.evaluated_epoch}", loss_ce, sync_dist=True)
+            self.log(f"final_{stage}_classifier_loss_{self.evaluated_epoch}_lin", loss_ce, sync_dist=True)
 
             accuracy_metric = getattr(self, f"online_{stage}_accuracy")
             accuracy_metric(F.softmax(logits, dim=-1), y.squeeze())
             self.log(
-                f"final_{stage}_accuracy_{self.evaluated_epoch}",
+                f"final_{stage}_accuracy_{self.evaluated_epoch}_lin",
                 accuracy_metric,
                 prog_bar=False,
                 sync_dist=True,
@@ -87,7 +87,7 @@ class ViTMAE_eval(pl.LightningModule):
             self.avg_train_losses.append(np.mean(self.train_losses))
 
             if (self.current_epoch+1)%10==0 and batch_idx==0:
-                plot_loss(self.avg_train_losses,name_loss="X-Entropy",save_dir=self.save_dir,name_file=f"_eval_train_{self.evaluated_epoch}")
+                plot_loss(self.avg_train_losses,name_loss="X-Entropy",save_dir=self.save_dir,name_file=f"_eval_train_{self.evaluated_epoch}_lin")
 
             return  loss_ce
 
@@ -100,7 +100,7 @@ class ViTMAE_eval(pl.LightningModule):
             accuracy_metric = getattr(self, f"online_{stage}_accuracy")
             accuracy_metric(F.softmax(logits, dim=-1), y.squeeze())
             self.log(
-                f"final_{stage}_accuracy_{self.evaluated_epoch}",
+                f"final_{stage}_accuracy_{self.evaluated_epoch}_lin",
                 accuracy_metric,
                 prog_bar=True,
                 sync_dist=True,
@@ -119,19 +119,19 @@ class ViTMAE_eval(pl.LightningModule):
                 att_map_spatial = torch.mean(attentions[:,1:,1:],dim=-1)
                 att_map_cls = att_map_cls.reshape([img.shape[0],int(np.sqrt(att_map_cls.shape[-1])),int(np.sqrt(att_map_cls.shape[-1]))])
                 att_map_spatial = att_map_spatial.reshape([img.shape[0],int(np.sqrt(att_map_spatial.shape[-1])),int(np.sqrt(att_map_spatial.shape[-1]))])
-                save_attention_maps(img[:10],att_map_cls[:10].unsqueeze(1),att_map_spatial[:10].unsqueeze(1),self.current_epoch+1, self.save_dir,f"eval_{self.evaluated_epoch}")
-                save_attention_maps_batch(att_map_cls=att_map_cls,att_map_spatial=att_map_spatial,epoch=self.current_epoch+1, output_dir=self.save_dir,name=f"eval_{self.evaluated_epoch}")
+                save_attention_maps(img[:10],att_map_cls[:10].unsqueeze(1),att_map_spatial[:10].unsqueeze(1),self.current_epoch+1, self.save_dir,f"eval_{self.evaluated_epoch}_lin")
+                save_attention_maps_batch(att_map_cls=att_map_cls,att_map_spatial=att_map_spatial,epoch=self.current_epoch+1, output_dir=self.save_dir,name=f"eval_{self.evaluated_epoch}_lin")
 
             return None    
 
     def on_validation_epoch_end(self):
         self.performance[self.current_epoch+1] = sum(self.performance[self.current_epoch+1])/self.datamodule.num_val_samples
         if (self.current_epoch+1)%10 == 0:
-            plot_performance(list(self.performance.keys()),list(self.performance.values()),self.save_dir,name=f"val_final_{self.evaluated_epoch}")
+            plot_performance(list(self.performance.keys()),list(self.performance.values()),self.save_dir,name=f"val_final_{self.evaluated_epoch}_lin")
 
     def on_fit_end(self):
         # Write to a CSV file
-        with open(os.path.join(self.save_dir,f'performance_final_{self.evaluated_epoch}.csv'), 'w', newline='') as csvfile:
+        with open(os.path.join(self.save_dir,f'performance_final_{self.evaluated_epoch}_lin.csv'), 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(['Eval Epoch', 'Test Accuracy'])
             for epoch in list(self.performance.keys()):
@@ -152,7 +152,6 @@ class ViTMAE_eval(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        print("This is the learning rate",self.learning_rate)
         def warmup(current_step: int):
             return 1 / (10 ** (float(num_warmup_epochs - current_step)))
 

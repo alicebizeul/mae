@@ -21,7 +21,8 @@ import numpy
 
 import model
 from model.module import ViTMAE
-from model.module_eval import ViTMAE_eval
+from model.module_lin import ViTMAE_lin
+from model.module_knn import ViTMAE_knn
 from model.vit_mae import ViTMAEForPreTraining
 from dataset.dataloader import DataModule
 from dataset.CLEVRCustomDataset import CLEVRCustomDataset
@@ -46,6 +47,7 @@ OmegaConf.register_new_resolver("decimal_2_percent", lambda decimal: int(100*dec
 OmegaConf.register_new_resolver("convert_str", lambda number: "_"+str(number))
 OmegaConf.register_new_resolver("substract_one", lambda number: number-1)
 OmegaConf.register_new_resolver('to_tuple', lambda a, b, c: (a,b,c))
+OmegaConf.register_new_resolver('as_tuple', lambda *args: tuple(args))
 
 # Main function
 @hydra.main(version_base="1.2", config_path="config", config_name="train_defaults.yaml")
@@ -64,7 +66,7 @@ def main(config: DictConfig) -> None:
         config.datamodule,
         data = config.datasets,
         masking = config.masking,
-        extra_data = config.extradata
+        extra_data = config.extradata,
     )
     
     # Creating model
@@ -106,7 +108,7 @@ def main(config: DictConfig) -> None:
     eval_configs = OmegaConf.to_container(config.evaluator, resolve=True)
     datamodule = instantiate(
         config.datamodule_eval,
-        masking = {"type":"pixel"},
+        masking = {"type":"pixel","strategy":"pixel"},
         data = config.datasets,
     )
     model_eval = instantiate(
@@ -120,18 +122,12 @@ def main(config: DictConfig) -> None:
             **eval_configs,
             logger=wandb_logger,
             enable_checkpointing = False,
-            num_sanity_val_steps=0
+            num_sanity_val_steps=0,
+            check_val_every_n_epoch=1
         )
-    print("------------------------- Start Evaluation")
+    print("------------------------- Start Evaluation: lin probe")
     evaluator.fit(model_eval, datamodule=datamodule)
-    print("------------------------- End Evaluation")
-
-
-    # KNN evaluation
-#    for n in [3,4,5,6,7,8,9,10,11,12]:
-#     model_eval = sklearn.neighbors.KNeighborsClassifier(n_neighbors=n) 
-#     model_eval.fit()
-#     model_eval.predict()
+    print("------------------------- End Evaluation: lin probe")
 
 
 if __name__ == "__main__":

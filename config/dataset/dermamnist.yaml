@@ -4,6 +4,8 @@ data:
   name: dermamnist
   resolution: 64
   channels: 3
+  height: ${data.resolution}
+  width: ${data.resolution}
   patch_size: 8
   batch_size: 512
   str_patch_size: ${convert_str:${data.patch_size}}

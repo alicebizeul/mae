@@ -11,7 +11,9 @@ transformation:
 transformation_train_list:
   resize:
     _target_: torchvision.transforms.RandomResizedCrop
-    size: ${data.resolution}
+    size:
+      - ${data.height}
+      - ${data.width}
     scale: [0.2,1.0]
     interpolation: 3
   flip:
