@@ -37,8 +37,6 @@ class PairedDataset(Dataset):
                 if self.masking.strategy == "tvb": self.pc_mask = self.get_pcs_index(threshold,self.eigenvalues.shape[0])
             else: 
                 self.pc_mask = None
-
-
     def __len__(self):
         return len(self.dataset)
 
@@ -61,10 +59,16 @@ class PairedDataset(Dataset):
                 nb_pc = np.random.randint(1,self.eigenvalues.shape[0],1)[0]
                 index = torch.randperm(self.eigenvalues.shape[0]).numpy()
                 pc_mask = index[:nb_pc]
+            elif self.masking.strategy == "sampling_pc_block":
+                nb_block = np.random.randint(1,self.eigenvalues.shape[0]//(8*8),1)[0]
+                index = torch.randperm(self.eigenvalues.shape[0]//(8*8)).numpy()
+                blocks = index[:nb_block]
+                pc_mask = np.linspace(0,self.eigenvalues.shape[0]-(8*8),self.eigenvalues.shape[0]//(8*8),dtype=int)[blocks]
+                pc_mask = np.concatenate([np.arange(x,x+(8*8)) for x in pc_mask])
         elif self.masking.type == "pixel":
             if self.masking.strategy == "sampling":
-                pc_mask = float(np.random.randint(50,90,1)[0]/100)            
-
+                # pc_mask = float(np.random.randint(50,90,1)[0]/100)            
+                pc_mask = float(np.random.randint(10,90,1)[0]/100)            
         return img1, y, pc_mask
 
 class DataModule(pl.LightningDataModule):
@@ -122,7 +126,7 @@ class DataModule(pl.LightningDataModule):
 
     def train_dataloader(self) -> DataLoader:
         training_loader = DataLoader(
-            self.train_dataset, batch_size=self.batch_size, shuffle=True, drop_last=False, num_workers=self.num_workers, collate_fn=self.collate_fn if self.masking.type == "pc" and self.masking.strategy in ["sampling_pc","sampling_ratio"] else None
+            self.train_dataset, batch_size=self.batch_size, shuffle=True, drop_last=False, num_workers=self.num_workers, collate_fn=self.collate_fn if self.masking.type == "pc" and self.masking.strategy in ["sampling_pc","sampling_ratio","sampling_pc_block"] else None
         )
         return training_loader
 

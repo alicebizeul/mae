@@ -4,11 +4,17 @@ data:
   name: imagenet
   resolution: 224
   channels: 3
+  height: ${data.resolution}
+  width: ${data.resolution}
   patch_size: 16
   batch_size: 128
   str_patch_size: ${convert_str:${data.patch_size}}
-  mean:  [0.485, 0.456, 0.406]
-  std: [0.229, 0.224, 0.225]
+  mean:
+    _target_: numpy.array
+    object: [0.485, 0.456, 0.406]
+  std: 
+    _target_: numpy.array
+    object: [0.229, 0.224, 0.225]
   classes: 21841
 
 datasets:

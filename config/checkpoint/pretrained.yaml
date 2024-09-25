@@ -3,7 +3,7 @@
 checkpoint:
   epoch: 800
   epoch_name: ${substract_one:${checkpoint.epoch}}
-  run_path: ${checkpoint_folders.${data.name}.${masking.type}.${masking.strategy}.${masking.str_ratio}.${data.str_patch_size}}
+  run_path: ${checkpoint_folders.${model_name}.${data.name}.${masking.type}.${masking.strategy}.${masking.str_ratio}.${data.str_patch_size}}
   path: ${base_logs_dir}/${checkpoint.run_path}/checkpoints/epoch=${checkpoint.epoch_name}-train_loss=0.00.ckpt
 
 checkpoint_fn: 

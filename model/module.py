@@ -77,7 +77,6 @@ class ViTMAE(pl.LightningModule):
             
             # mae training
             if self.masking.type == "pc":
-                # if self.masking.strategy in ["bvt","tvb"]:
                 pc_mask = pc_mask[0]
                 target  = (img.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask] @ self.masking_fn[:,pc_mask].T).reshape(img.shape)
 
@@ -85,21 +84,11 @@ class ViTMAE(pl.LightningModule):
                     pc_mask = torch.arange(pc_mask[0])
                 if self.masking.strategy == "bvt":
                     pc_mask = torch.arange(pc_mask[-1]+1,self.masking_fn.shape[-1])
-                if self.masking.strategy in ["sampling_pc","sampling_ratio"]:
-                    indexes = torch.arange(self.masking_fn.shape[1]).to(img.device)
+                if self.masking.strategy in ["sampling_pc","sampling_ratio","sampling_pc_block"]:
+                    indexes = torch.arange(self.masking_fn.shape[1],device=self.device)#.to(img.device)
                     pc_mask = indexes[~torch.isin(indexes,pc_mask[pc_mask!=-1])]
-
                 img     = (img.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask] @ self.masking_fn[:,pc_mask].T).reshape(img.shape)
-                # elif self.masking.strategy in ["sampling_pc","sampling_ratio"]:
-                #     target = []
-                    # for i in range(img.shape[0]):
-                    #     target.append((img[i].reshape([1,-1]) @ self.masking_fn[:,pc_mask[i][pc_mask[i]!=-1]] @ self.masking_fn[:,pc_mask[i][pc_mask[i]!=-1]].T).reshape(img.shape[1:]))
-                    # target = torch.stack(target,dim=0).view(img.shape)
-                    # for i in range(img.shape[0]):
-                    #     indexes = torch.arange(self.masking_fn.shape[1]).to(img.device)
-                    #     anti_mask = indexes[~torch.isin(indexes,pc_mask[i][pc_mask[i]!=-1])]
-                    #     img[i] = (img[i].reshape([1,-1]) @ self.masking_fn[:,anti_mask] @ self.masking_fn[:,anti_mask].T).reshape(img.shape[1:])
-            
+
             elif self.masking.type == "pixel":
                 if self.masking.strategy == "sampling":
                     self.model.config.mask_ratio = pc_mask[0]

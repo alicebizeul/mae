@@ -24,6 +24,7 @@ datasets:
     _target_: CLEVRCustomDataset
     root: ${base_data_home}/CLEVR_v1.0/images/train
     transform: ${transformation.train}
+    train: True
 
   val:
     _target_: CLEVRCustomDataset

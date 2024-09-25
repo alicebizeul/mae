@@ -3,6 +3,8 @@
 data:
   name: bloodmnist
   resolution: 64
+  height: ${data.resolution}
+  width: ${data.resolution}
   channels: 3
   batch_size: 512
   patch_size: 8

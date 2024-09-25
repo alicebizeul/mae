@@ -3,6 +3,6 @@
 defaults:
   - override /dataset: bloodmnist
   - override /model: vit-t
-  - override /masking: pc_tvb
+  - override /masking: pc_pcsampling_block
   - override /transformations: mae_adapted
 

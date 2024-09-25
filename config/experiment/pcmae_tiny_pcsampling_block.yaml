@@ -1,8 +1,8 @@
 # @package _global_
 
 defaults:
-  - override /dataset: bloodmnist
+  - override /dataset: tinyimagenet
   - override /model: vit-t
-  - override /masking: pc_tvb
+  - override /masking: pc_pcsampling_block
   - override /transformations: mae_adapted
 

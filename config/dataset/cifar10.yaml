@@ -3,6 +3,8 @@
 data:
   name: cifar10
   resolution: 32
+  height: ${data.resolution}
+  width: ${data.resolution}
   channels: 3
   batch_size: 512
   patch_size: 8
@@ -22,21 +24,21 @@ data:
 datasets:
   train:
     _target_: torchvision.datasets.CIFAR10
-    root: ${base_data_home}/
+    root: ${base_data_home}
     train: True
     download: ${download}
     transform: ${transformation.train}
 
   val:
     _target_: torchvision.datasets.CIFAR10
-    root: ${base_data_home}/
+    root: ${base_data_home}
     train: False
     download: ${download}
     transform: ${transformation.val}
 
   test:
     _target_: torchvision.datasets.CIFAR10
-    root: ${base_data_home}/
+    root: ${base_data_home}
     train: False
     download: ${download}
     transform: ${transformation.val}
