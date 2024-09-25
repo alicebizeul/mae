@@ -94,6 +94,8 @@ class ViTMAE(pl.LightningModule):
                     self.model.config.mask_ratio = pc_mask[0]
                     self.model.vit.embeddings.config.mask_ratio=pc_mask[0]
                 target = img
+            elif self.masking.type == "segmentation":
+                target = img
 
             outputs, cls = self.model(img,return_rep=False)
             reconstruction = self.model.unpatchify(outputs.logits)

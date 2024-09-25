@@ -3,6 +3,8 @@
 data:
   name: clevr
   resolution: 224
+  height: 240
+  width: 320
   channels: 3
   batch_size: 64
   patch_size: 16
@@ -17,7 +19,7 @@ data:
     data: 
       _target_: numpy.load
       file: 
-  classes: 10
+  classes: 24
 
 datasets:
   train:
@@ -55,7 +57,9 @@ datamodule:
   num_workers: 8
   classes: ${data.classes}
   channels: ${data.channels}
-  resolution: ${data.resolution}
+  resolution:
+    - ${data.height}
+    - ${data.width}
 
 datamodule_eval:
   _target_: dataset.dataloader.DataModule
@@ -63,7 +67,9 @@ datamodule_eval:
   num_workers: ${datamodule.num_workers}
   classes: ${data.classes}
   channels: ${data.channels}
-  resolution: ${data.resolution}
+  resolution:
+    - ${data.height}
+    - ${data.width}
 
 extradata:
   pcamodule:

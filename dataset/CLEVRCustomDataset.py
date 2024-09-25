@@ -96,11 +96,11 @@ class CLEVRCustomDataset(Dataset):
         for i in range(11):
             mp = f"{self.data_dir}/masks/{self.split_indices[idx]}_{i}.png"
             m = mask_tf(Image.open(mp))
-            masks.append(self.morph_fn(m))
+            mask = torch.zeros_like(m)
+            mask[m > 0.5] = 1.
+            masks.append(self.morph_fn(mask))
         final_mask = torch.stack(masks)[1:, ...]
-        mask = torch.zeros_like(m)
-        mask[final_mask > 0.5] = 1.
-        return mask
+        return final_mask
 
     def __getitem__(self, idx):
         imgpath = f"{self.data_dir}/images/{self.split_indices[idx]}.png"

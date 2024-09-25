@@ -37,6 +37,9 @@ class PairedDataset(Dataset):
                 if self.masking.strategy == "tvb": self.pc_mask = self.get_pcs_index(threshold,self.eigenvalues.shape[0])
             else: 
                 self.pc_mask = None
+        elif self.masking.type == "segmentation":
+            self.pc_mask = 0
+
     def __len__(self):
         return len(self.dataset)
 
