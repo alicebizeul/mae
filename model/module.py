@@ -124,6 +124,11 @@ class ViTMAE(pl.LightningModule):
         len_keep = patched_seg_mask.sum(dim=1).max().int()
         ids_keep = ids_sort[:, :len_keep] 
 
+        # Set correct masking ratio
+        ratio = patched_seg_mask.sum()/(patched_seg_mask.shape[0]*patched_seg_mask.shape[1])
+        self.model.config.mask_ratio = ratio
+        self.model.vit.embeddings.config.mask_ratio=ratio
+
         def masking_fn(sequence, noise=None):
             sequence_unmasked = torch.gather(
                 sequence,
