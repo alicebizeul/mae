@@ -80,17 +80,48 @@ class ViTMAE(pl.LightningModule):
         if self.masking.strategy == 'complete':
             seg_mask = seg_mask.max(dim=1).values.float()
             patched_seg_mask = self.mask_patch_pool(seg_mask[:, 0]).flatten(1)
+        else:
+            # Patch each individual segmentation mask
+            patched_seg_mask = (
+                self.mask_patch_pool(seg_mask[:, :, 0].float()).flatten(2)
+            )
+            batch_size, n_masks, n_patches = patched_seg_mask.shape
+            # Get maximum number of patches out of any segmentation mask
+            max_patches_per_element = patched_seg_mask.sum(dim=-1).max().int()
+            # Create random order overlapping with the segmentation mask
+            segmentation_noise = torch.rand_like(patched_seg_mask) * patched_seg_mask
+            sorted_order = torch.argsort(segmentation_noise, dim=-1, descending=True).to(seg_mask.device)
+            # Randomly select patches from the segmentation mask to mask out
+            num_patches_per_mask = torch.randint(
+                low=0,
+                high=max_patches_per_element,
+                size=(batch_size, n_masks, max_patches_per_element),
+            ).to(seg_mask.device)
+            # Gather indices to and set them to zero
+            index_to_mask = torch.gather(sorted_order, dim=-1, index=num_patches_per_mask).long()
+            patched_seg_mask = patched_seg_mask.scatter(
+                dim=-1, index=index_to_mask, value=0
+            )
+            if self.masking.strategy == "partial":
+                # Select random index to keep for each object
+                idx_to_keep = sorted_order[:, :, 0, None]
+                patched_seg_mask = patched_seg_mask.scatter(
+                    dim=-1, index=idx_to_keep, value=1
+                )
+
+            # Collapse segmentation mask to get a single mask per sample
+            patched_seg_mask = patched_seg_mask.max(dim=1).values
 
         # Invert mask because we keep patches with 0
-        seg_mask = 1 - seg_mask
-
+        patched_seg_mask = 1 - patched_seg_mask
+        
         # Get indices such that, per batch, the first indices correspond
         # to '0', i.e., keep, and the last indices to '1', i.e., mask within the patched_seg_mask
         ids_sort = torch.argsort(patched_seg_mask, dim=1).to(
             patched_seg_mask.device
         ) 
         # Keep as many patches as the maximum selected by any mask
-        len_keep = (1 - patched_seg_mask).sum(dim=1).max().int()
+        len_keep = patched_seg_mask.sum(dim=1).max().int()
         ids_keep = ids_sort[:, :len_keep] 
 
         def masking_fn(sequence, noise=None):
@@ -102,7 +133,7 @@ class ViTMAE(pl.LightningModule):
             # Restore original mask from sorted mask/sequence
             ids_restore = torch.argsort(ids_sort, dim=1).to(patched_seg_mask.device)
             return sequence_unmasked, patched_seg_mask, ids_restore
-        # Get all patch indices that are kept but should not be masked 
+        # Get all patch indices that are kept but should not be masked
         batch_idx, patch_idx = torch.where(
             torch.gather(patched_seg_mask, dim=1, index=ids_keep) == 1
         )
@@ -141,12 +172,15 @@ class ViTMAE(pl.LightningModule):
                     self.model.vit.embeddings.config.mask_ratio=pc_mask[0]
                 target = img
             elif self.masking.type == "segmentation":
+                original_masking_fn = self.model.vit.embeddings.random_masking
                 self.model.vit.embeddings.random_masking, head_mask = (
                     self.get_current_masking_function(pc_mask)
                 )
                 target = img
 
             outputs, cls = self.model(img,return_rep=False, head_mask=head_mask)
+            if self.masking.type == "segmentation":
+                self.model.vit.embeddings.random_masking = original_masking_fn
             reconstruction = self.model.unpatchify(outputs.logits)
             mask = outputs.mask.unsqueeze(-1).repeat(1, 1, self.model.config.patch_size**2 *3)  # (N, H*W, p*p*3)
             mask = self.model.unpatchify(mask)

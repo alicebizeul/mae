@@ -193,7 +193,11 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
         ids_restore = outputs.ids_restore
         mask = outputs.mask
 
-    
+        # Mask out encoder embeddings that correspond to padded tokens
+        if head_mask is not None:
+            head_mask_per_token = head_mask[0,:,0,0][...,None]
+            latent = head_mask_per_token*latent
+
         #self.forward_loss(pixel_values, logits, mask, interpolate_pos_encoding=interpolate_pos_encoding)
 
         # if not return_dict:
