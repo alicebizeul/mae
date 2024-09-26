@@ -202,7 +202,10 @@ class ViTMAE(pl.LightningModule):
                 plot_loss(self.avg_train_losses,name_loss="MSE",save_dir=self.save_dir,name_file="_train")
                 plot_loss(self.avg_online_losses,name_loss="X-Ent",save_dir=self.save_dir,name_file="_train_online_cls")
 
-                if self.model.config.mask_ratio > 0:
+                if (
+                    self.model.config.mask_ratio is None
+                    or self.model.config.mask_ratio > 0
+                ):
                     save_reconstructed_images((-1*(mask[:10]-1))*img[:10],mask[:10]*img[:10], reconstruction[:10], self.current_epoch+1, self.save_dir,"train")
                 else:
                     save_reconstructed_images(img[:10], target[:10], reconstruction[:10], self.current_epoch+1, self.save_dir,"train")
