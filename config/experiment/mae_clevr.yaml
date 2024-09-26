@@ -3,4 +3,4 @@
 defaults:
   - override /dataset: clevr
   - override /model: vit-t
-  - override /masking: segmentation
+  - override /masking: segmentation_complete

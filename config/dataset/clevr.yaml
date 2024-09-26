@@ -72,6 +72,7 @@ datamodule_eval:
     - ${data.width}
 
 extradata:
+  # TODO: Set correct paths for pca extradata
   pcamodule:
     _target_ : numpy.load
     file: ${base_data_home}/cifar-10-batches-py/pc_matrix.npy

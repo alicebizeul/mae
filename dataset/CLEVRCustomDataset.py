@@ -13,7 +13,7 @@ mask_tf = v2.Compose([
     v2.ToTensor()
 ])
 img_tf = v2.Compose([
-    v2.PILToTensor(),
+    # v2.PILToTensor(),
     v2.Resize(size=[224, 224]),
     v2.ToTensor()
 ])
@@ -134,7 +134,7 @@ class CLEVRCustomDataset(Dataset):
             anno['n_objects'] = self.n_objects[idx]
 
         if self.split == "train":
-            return img, [anno["labels"], anno["mask"]]
+            return img, [anno["labels"], anno["mask"].squeeze(1)]
         else:
             return img, anno["labels"]
 
