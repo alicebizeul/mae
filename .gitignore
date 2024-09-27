@@ -1,5 +1,7 @@
 # outputs 
 .vscode
+output.png
+run_configs.yaml
 logs
 ./output_log/
 /output_log/*

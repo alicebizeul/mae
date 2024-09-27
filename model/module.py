@@ -99,22 +99,22 @@ class ViTMAE(pl.LightningModule):
             ).to(seg_mask.device)
             # Gather indices to and set them to zero
             index_to_mask = torch.gather(sorted_order, dim=-1, index=num_patches_per_mask).long()
-            patched_seg_mask = patched_seg_mask.scatter(
+            new_patched_seg_mask = patched_seg_mask.scatter(
                 dim=-1, index=index_to_mask, value=0
             )
             if self.masking.strategy == "partial":
                 # Select random index to keep for each object
                 idx_to_keep = sorted_order[:, :, 0, None]
-                patched_seg_mask = patched_seg_mask.scatter(
+                new_patched_seg_mask = new_patched_seg_mask.scatter(
                     dim=-1, index=idx_to_keep, value=1
-                )
+                ) * patched_seg_mask
 
             # Collapse segmentation mask to get a single mask per sample
-            patched_seg_mask = patched_seg_mask.max(dim=1).values
+            patched_seg_mask = new_patched_seg_mask.max(dim=1).values
 
         # Invert mask because we keep patches with 0
         patched_seg_mask = 1 - patched_seg_mask
-        
+
         # Get indices such that, per batch, the first indices correspond
         # to '0', i.e., keep, and the last indices to '1', i.e., mask within the patched_seg_mask
         ids_sort = torch.argsort(patched_seg_mask, dim=1).to(
