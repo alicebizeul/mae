@@ -84,8 +84,8 @@ class ViTMAE(pl.LightningModule):
                     pc_mask = torch.arange(pc_mask[0])
                 if self.masking.strategy == "bvt":
                     pc_mask = torch.arange(pc_mask[-1]+1,self.masking_fn.shape[-1])
-                if self.masking.strategy in ["sampling_pc","sampling_ratio","sampling_pc_block"]:
-                    indexes = torch.arange(self.masking_fn.shape[1],device=self.device)#.to(img.device)
+                if self.masking.strategy in ["sampling_pc","sampling_ratio","sampling_pc_block","pc"]:
+                    indexes = torch.arange(self.masking_fn.shape[1],device=self.device)
                     pc_mask = indexes[~torch.isin(indexes,pc_mask[pc_mask!=-1])]
                 img     = (img.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask] @ self.masking_fn[:,pc_mask].T).reshape(img.shape)
 

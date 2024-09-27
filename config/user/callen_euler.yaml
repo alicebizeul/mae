@@ -21,19 +21,9 @@ checkpoint_folders:
             _8: mae_tiny_pc_0.0_pixel_0.9/2024-08-27_19-14-36
         sampling:
           _None: 
-            _8: mae_sampling_tiny_pc_0.0_pixel_0.0/2024-09-15_17-49-29
+            _8: mae_sampling_tiny/2024-09-24_08-25-21 #mae_sampling_tiny_pc_0.0_pixel_0.0/2024-09-15_17-49-29
       pc:
         bvt:
-          _10:
-            _8:
-          _20:
-            _8:
-          _30: 
-            _8:
-          _40:
-            _8:
-          _50:
-            _8:
           _60: 
             _8: pcmae_tiny_bvt_pc_tvb_0.6_pixel_0.0/2024-09-02_21-08-48
           _70:
@@ -45,18 +35,6 @@ checkpoint_folders:
           _90:
             _8: pcmae_tiny_bvt_pc_tvb_0.9_pixel_0.0/2024-09-02_21-26-18
         tvb:
-          _10:
-            _8:
-          _20:
-            _8:
-          _30: 
-            _8:
-          _40:
-            _8:
-          _50:
-            _8:
-          _60:
-            _8: 
           _70:
             _8: pcmae_tiny_tvb_pc_tvb_0.7_pixel_0.0/2024-09-02_18-17-06
           _80: 
@@ -65,12 +43,34 @@ checkpoint_folders:
             _8: pcmae_tiny_tvb_pc_tvb_0.85_pixel_0.0/2024-09-02_18-17-06
           _90:
             _8: 
+        pc:
+          _10:
+            _8:
+          _20:
+            _8:
+          _30:
+            _8:
+          _40:
+            _8:
+          _50:
+            _8:
+          _60:
+            _8:
+          _70:
+            _8:
+          _80:
+            _8:
+          _90:
+            _8:
         sampling_pc:
           _None: 
             _8: pcmae_tiny_pcsampling_pc_0.0_pixel_0.0/2024-09-15_09-00-49
         sampling_ratio:
           _None: 
             _8: pcmae_tiny_ratiosampling_pc_0.0_pixel_0.0/2024-09-15_09-00-49
+        sampling_pc_block:
+          _None:
+            _8: pcmae_tiny_pcsampling_block/2024-09-24_11-10-40
     cifar10: 
       pixel:
         pixel:
@@ -87,8 +87,27 @@ checkpoint_folders:
             _8: mae_cifar10_pc_0.0_pixel_0.9/2024-08-27_19-14-37
         sampling:
           _None: 
-            _8: mae_sampling_cifar10_pc_0.0_pixel_0.0/2024-09-15_17-50-13
+            _8: mae_sampling_cifar10/2024-09-25_19-25-28 #mae_sampling_cifar10_pc_0.0_pixel_0.0/2024-09-15_17-50-13 (0.5-0.9 range)
       pc:
+        pc:
+          _10:
+            _8: pcmae_cifar10_pc_pc_tvb_0.1/2024-09-26_08-47-13
+          _20:
+            _8: pcmae_cifar10_pc_pc_tvb_0.2/2024-09-26_08-47-17
+          _30:
+            _8: pcmae_cifar10_pc_pc_tvb_0.3/2024-09-26_08-47-17
+          _40:
+            _8: pcmae_cifar10_pc_pc_tvb_0.4/2024-09-26_08-47-17
+          _50:
+            _8: pcmae_cifar10_pc_pc_tvb_0.5/2024-09-26_08-47-17
+          _60:
+            _8: pcmae_cifar10_pc_pc_tvb_0.6/2024-09-26_08-47-17
+          _70:
+            _8: pcmae_cifar10_pc_pc_tvb_0.7/2024-09-26_08-47-17
+          _80:
+            _8: pcmae_cifar10_pc_pc_tvb_0.8/2024-09-26_08-47-17
+          _90:
+            _8: pcmae_cifar10_pc_pc_tvb_0.9/2024-09-26_08-47-12
         tvb:
           _10:
             _8: pcmae_cifar10_tvb_pc_tvb_0.1/2024-09-22_22-12-23
@@ -133,10 +152,13 @@ checkpoint_folders:
             _8: pcmae_cifar10_bvt_pc_tvb_0.9_pixel_0.0/2024-09-02_22-07-00
         sampling_pc:
           _None: 
-            _8: pcmae_cifar10_pcsampling_pc_0.0_pixel_0.0/2024-09-10_21-43-36
+            _8: pcmae_cifar10_pcsampling/2024-09-26_00-27-58 #pcmae_cifar10_pcsampling_pc_0.0_pixel_0.0/2024-09-10_21-43-36
         sampling_ratio:
           _None: 
             _8: pcmae_cifar10_ratiosampling_pc_0.0_pixel_0.0/2024-09-08_16-03-37
+        sampling_pc_block:
+          _None:
+            _8: pcmae_cifar10_pcsampling_block/2024-09-24_11-10-41
     bloodmnist:
       pixel:
         pixel:
@@ -155,6 +177,25 @@ checkpoint_folders:
           _None:
             _8: mae_sampling_blood/2024-09-23_19-22-33 #mae_sampling_blood_pc_0.0_pixel_0.0/2024-09-15_17-49-36  (0.5,0.9) range
       pc:
+        pc:
+          _10:
+            _8: pcmae_blood_pc_pc_tvb_0.1/2024-09-26_08-46-34
+          _20:
+            _8: pcmae_blood_pc_pc_tvb_0.2/2024-09-26_08-47-13
+          _30:
+            _8: pcmae_blood_pc_pc_tvb_0.3/2024-09-26_08-47-13
+          _40:
+            _8: pcmae_blood_pc_pc_tvb_0.4/2024-09-26_08-47-13
+          _50:
+            _8: pcmae_blood_pc_pc_tvb_0.5/2024-09-26_08-46-34
+          _60:
+            _8: pcmae_blood_pc_pc_tvb_0.6/2024-09-26_08-46-34
+          _70:
+            _8: pcmae_blood_pc_pc_tvb_0.7/2024-09-26_08-46-34
+          _80:
+            _8: pcmae_blood_pc_pc_tvb_0.8/2024-09-26_08-46-34
+          _90:
+            _8: pcmae_blood_pc_pc_tvb_0.9/2024-09-26_08-47-13
         tvb:
           _10:
             _8: pcmae_blood_bvt_pc_tvb_0.1/2024-09-22_22-12-06
@@ -199,10 +240,13 @@ checkpoint_folders:
             _8: pcmae_blood_bvt_pc_tvb_0.9/2024-09-20_19-42-27
         sampling_pc:
           _None: 
-            _8: pcmae_blood_pcsampling_pc_0.0_pixel_0.0/2024-09-08_16-03-37
+            _8: pcmae_blood_pcsampling/2024-09-26_01-53-32 #pcmae_blood_pcsampling_pc_0.0_pixel_0.0/2024-09-08_16-03-37
         sampling_ratio:
           _None: 
             _8: pcmae_blood_ratiosampling_pc_0.0_pixel_0.0/2024-09-08_16-03-46
+        sampling_pc_block:
+          _None:
+            _8: pcmae_blood_pcsampling_block/2024-09-24_11-10-41
     dermamnist: 
       pixel:
         pixel:
@@ -221,6 +265,25 @@ checkpoint_folders:
           _None: 
             _8: mae_sampling_derma/2024-09-23_19-22-34 #mae_sampling_derma_pc_0.0_pixel_0.0/2024-09-15_17-49-36 (0.5,0.9) range
       pc:
+        pc:
+          _10:
+            _8: pcmae_derma_pc_pc_tvb_0.1/2024-09-26_08-47-12
+          _20:
+            _8: pcmae_derma_pc_pc_tvb_0.2/2024-09-26_08-47-12
+          _30:
+            _8: pcmae_derma_pc_pc_tvb_0.3/2024-09-26_08-47-12
+          _40:
+            _8: pcmae_derma_pc_pc_tvb_0.4/2024-09-26_08-47-12
+          _50:
+            _8: pcmae_derma_pc_pc_tvb_0.5/2024-09-26_08-47-26
+          _60:
+            _8: pcmae_derma_pc_pc_tvb_0.6/2024-09-26_08-47-26
+          _70:
+            _8: pcmae_derma_pc_pc_tvb_0.7/2024-09-26_08-46-37
+          _80:
+            _8: pcmae_derma_pc_pc_tvb_0.8/2024-09-26_11-24-24
+          _90:
+            _8: pcmae_derma_pc_pc_tvb_0.9/2024-09-26_11-25-17
         bvt:
           _10:
             _8: pcmae_derma_bvt_pc_tvb_0.1/2024-09-23_00-51-48
@@ -265,10 +328,13 @@ checkpoint_folders:
             _8: pcmae_derma_tvb_pc_tvb_0.9_pixel_0.0/2024-09-02_21-08-48
         sampling_pc:
           _None:
-            _8: pcmae_derma_pcsampling_pc_0.0_pixel_0.0/2024-09-13_11-27-24
+            _8: pcmae_derma_pcsampling/2024-09-26_01-56-26 #pcmae_derma_pcsampling_pc_0.0_pixel_0.0/2024-09-13_11-27-24
         sampling_ratio:
           _None:
             _8: pcmae_derma_ratiosampling_pc_0.0_pixel_0.0/2024-09-13_11-27-24
+        sampling_pc_block:
+          _None:
+            _8: pcmae_derma_pcsampling_block/2024-09-24_11-10-45
     pathmnist:
       pixel:
         pixel:
@@ -285,8 +351,27 @@ checkpoint_folders:
             _8: mae_path_pc_0.0_pixel_0.9/2024-08-27_19-15-15
         sampling:
           _None: 
-            _8: mae_sampling_path_pc_0.0_pixel_0.0/2024-09-15_17-49-36
+            _8: mae_sampling_path/2024-09-24_08-25-21 # mae_sampling_path_pc_0.0_pixel_0.0/2024-09-15_17-49-36
       pc:
+        pc:
+          _10:
+            _8:
+          _20:
+            _8:
+          _30:
+            _8:
+          _40:
+            _8:
+          _50:
+            _8:
+          _60:
+            _8:
+          _70:
+            _8:
+          _80:
+            _8:
+          _90:
+            _8:
         tvb:
           _10:
             _8:
@@ -335,6 +420,9 @@ checkpoint_folders:
         sampling_ratio:
           _None: 
             _8: pcmae_path_ratiosampling_pc_0.0_pixel_0.0/2024-09-13_11-27-24
+        sampling_pc_block:
+          _None:
+            _8: pcmae_path_pcsampling_block/2024-09-24_11-10-45
   vit-b:
     tinyimagenet:
       pixel:
@@ -345,7 +433,7 @@ checkpoint_folders:
             _8: mae_tiny_pixel_0.9_model_vit-b/2024-09-21_09-57-41
         sampling:
           _None: 
-            _8: mae_sampling_tiny_model_vit-b/2024-09-23_10-19-22
+            _8: mae_sampling_tiny_model_vit-b/2024-09-23_10-19-22 
       pc:
         bvt:
           _60: 
@@ -356,6 +444,9 @@ checkpoint_folders:
         sampling_ratio:
           _None: 
             _8: pcmae_tiny_ratiosampling_model_vit-b/2024-09-21_09-57-11
+        sampling_pc_block:
+          _None:
+            _8: pcmae_tiny_pcsampling_block_model_vit-b/2024-09-24_11-18-48
     cifar10: 
       pixel:
         pixel:
@@ -376,6 +467,9 @@ checkpoint_folders:
         sampling_ratio:
           _None: 
             _8: pcmae_cifar10_ratiosampling_model_vit-b/2024-09-21_09-57-11
+        sampling_pc_block:
+          _None:
+            _8: pcmae_cifar10_pcsampling_block_model_vit-b/2024-09-24_11-19-38
     bloodmnist:
       pixel:
         pixel:
@@ -396,6 +490,9 @@ checkpoint_folders:
         sampling_ratio:
           _None: 
             _8: pcmae_blood_ratiosampling_model_vit-b/2024-09-21_09-57-13
+        sampling_pc_block:
+          _None:
+            _8: pcmae_blood_pcsampling_block_model_vit-b/2024-09-24_11-19-38
     dermamnist: 
       pixel:
         pixel:
@@ -416,6 +513,9 @@ checkpoint_folders:
         sampling_ratio:
           _None:
             _8: pcmae_derma_ratiosampling_model_vit-b/2024-09-21_09-56-22
+        sampling_pc_block:
+          _None:
+            _8: pcmae_derma_pcsampling_block_model_vit-b/2024-09-24_11-19-38
     pathmnist:
       pixel:
         pixel:
@@ -425,7 +525,7 @@ checkpoint_folders:
             _8: mae_path_pixel_0.8_model_vit-b/2024-09-21_09-57-41
         sampling:
           _None: 
-            _8: mae_sampling_path_model_vit-b/2024-09-23_10-19-22
+            _8: mae_sampling_path_model_vit-b/2024-09-24_08-23-37 # mae_sampling_path_model_vit-b/2024-09-21_09-56-42
       pc:
         bvt:
           _60:
@@ -436,3 +536,6 @@ checkpoint_folders:
         sampling_ratio:
           _None: 
             _8: pcmae_path_ratiosampling_model_vit-b/2024-09-21_09-57-13
+        sampling_pc_block:
+          _None:
+            _8: pcmae_path_pcsampling_block/2024-09-24_11-10-45

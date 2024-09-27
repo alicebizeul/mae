@@ -46,28 +46,35 @@ class PairedDataset(Dataset):
         img1, y = self.dataset[idx]
         pc_mask = self.pc_mask
         if self.masking.type == "pc":
-            if self.masking.strategy == "sampling_ratio":
-                pc_ratio      = float(np.random.randint(np.ceil(100*(self.eigenvalues[0]+self.eigenvalues[1])),99,1)[0]/100)
-                threshold     = self.find_threshold(self.eigenvalues,pc_ratio)
-                top_vs_bottom = np.random.randint(0,2,1)[0]
-                if top_vs_bottom == 0:
-                    pc_mask = self.get_pcs_index(threshold)
-                else:
-                    pc_mask = self.get_pcs_index(threshold,self.eigenvalues.shape[0])
+            # if self.masking.strategy == "sampling_ratio":
+            #     pc_ratio      = float(np.random.randint(np.ceil(100*(self.eigenvalues[0]+self.eigenvalues[1])),99,1)[0]/100)
+            #     threshold     = self.find_threshold(self.eigenvalues,pc_ratio)
+            #     top_vs_bottom = np.random.randint(0,2,1)[0]
+            #     if top_vs_bottom == 0:
+            #         pc_mask = self.get_pcs_index(threshold)
+            #     else:
+            #         pc_mask = self.get_pcs_index(threshold,self.eigenvalues.shape[0])
 
-            elif self.masking.strategy == "sampling_pc":
-                nb_pc = np.random.randint(1,self.eigenvalues.shape[0],1)[0]
+            if self.masking.strategy == "sampling_pc":
                 index = torch.randperm(self.eigenvalues.shape[0]).numpy()
-                pc_mask = index[:nb_pc]
-            elif self.masking.strategy == "sampling_pc_block":
-                nb_block = np.random.randint(1,self.eigenvalues.shape[0]//(8*8),1)[0]
-                index = torch.randperm(self.eigenvalues.shape[0]//(8*8)).numpy()
-                blocks = index[:nb_block]
-                pc_mask = np.linspace(0,self.eigenvalues.shape[0]-(8*8),self.eigenvalues.shape[0]//(8*8),dtype=int)[blocks]
-                pc_mask = np.concatenate([np.arange(x,x+(8*8)) for x in pc_mask])
+                pc_ratio = np.random.randint(10,90,1)[0]/100
+                threshold = self.find_threshold(self.eigenvalues[index],pc_ratio)
+                pc_mask = index[:threshold]
+            elif self.masking.strategy == "pc":
+                index = torch.randperm(self.eigenvalues.shape[0]).numpy()
+                threshold = self.find_threshold(self.eigenvalues[index],self.masking.pc_ratio)
+                pc_mask = index[:threshold]
+            # elif self.masking.strategy == "pc_block":
+            #     index = torch.randperm(self.eigenvalues.shape[0]).numpy()
+
+            # elif self.masking.strategy == "sampling_pc_block":
+            #     nb_block = np.random.randint(1,self.eigenvalues.shape[0]//(8*8),1)[0]
+            #     index = torch.randperm(self.eigenvalues.shape[0]//(8*8)).numpy()
+            #     blocks = index[:nb_block]
+            #     pc_mask = np.linspace(0,self.eigenvalues.shape[0]-(8*8),self.eigenvalues.shape[0]//(8*8),dtype=int)[blocks]
+            #     pc_mask = np.concatenate([np.arange(x,x+(8*8)) for x in pc_mask])
         elif self.masking.type == "pixel":
             if self.masking.strategy == "sampling":
-                # pc_mask = float(np.random.randint(50,90,1)[0]/100)            
                 pc_mask = float(np.random.randint(10,90,1)[0]/100)            
         return img1, y, pc_mask
 
@@ -126,7 +133,7 @@ class DataModule(pl.LightningDataModule):
 
     def train_dataloader(self) -> DataLoader:
         training_loader = DataLoader(
-            self.train_dataset, batch_size=self.batch_size, shuffle=True, drop_last=False, num_workers=self.num_workers, collate_fn=self.collate_fn if self.masking.type == "pc" and self.masking.strategy in ["sampling_pc","sampling_ratio","sampling_pc_block"] else None
+            self.train_dataset, batch_size=self.batch_size, shuffle=True, drop_last=False, num_workers=self.num_workers, collate_fn=self.collate_fn if self.masking.type == "pc" and self.masking.strategy in ["sampling_pc","sampling_ratio","sampling_pc_block","pc"] else None
         )
         return training_loader
 
