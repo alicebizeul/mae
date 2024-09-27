@@ -3,6 +3,9 @@ from hydra.utils import instantiate
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 
+import torch
+from torch import nn
+import torch.nn as nn
 import torchvision
 import torchvision.datasets
 from torchvision.datasets import CIFAR10

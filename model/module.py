@@ -2,6 +2,7 @@ import pytorch_lightning as pl
 import torchmetrics
 from torch import Tensor
 import torch
+from torch import nn
 import torch.nn as nn
 from typing import Optional, Dict, List, Any
 import torch.nn.functional as F
@@ -30,6 +31,9 @@ class ViTMAE(pl.LightningModule):
         warmup: int =10,
         datamodule: Optional[pl.LightningDataModule] = None,
         eval_freq: int =100,
+        eval_type ="multiclass",
+        eval_fn =nn.CrossEntropyLoss(),
+        eval_logit_fn = nn.Softmax(),
         save_dir: str =None,
     ):
         super().__init__()
@@ -59,12 +63,13 @@ class ViTMAE(pl.LightningModule):
 
         self.classifier = nn.Linear(model.config.hidden_size, self.num_classes)
 
-        self.online_classifier_loss = nn.CrossEntropyLoss()
+        self.online_classifier_loss = eval_fn
+        self.online_logit_fn= eval_logit_fn
         self.online_train_accuracy = torchmetrics.Accuracy(
-                    task="multiclass", num_classes=self.num_classes, top_k=1
+                    task=eval_type, num_classes=self.num_classes, num_labels=self.num_classes, top_k=1
         )
         self.online_val_accuracy = torchmetrics.Accuracy(
-                    task="multiclass", num_classes=self.num_classes, top_k=1
+                    task=eval_type, num_classes=self.num_classes, num_labels=self.num_classes, top_k=1
         ) 
         self.save_dir = save_dir
         self.train_losses = []
@@ -162,11 +167,7 @@ class ViTMAE(pl.LightningModule):
                 pc_mask = pc_mask[0]
                 target  = (img.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask] @ self.masking_fn[:,pc_mask].T).reshape(img.shape)
 
-                if self.masking.strategy == "tvb":
-                    pc_mask = torch.arange(pc_mask[0])
-                if self.masking.strategy == "bvt":
-                    pc_mask = torch.arange(pc_mask[-1]+1,self.masking_fn.shape[-1])
-                if self.masking.strategy in ["sampling_pc","sampling_ratio","sampling_pc_block","pc"]:
+                if self.masking.strategy in ["sampling_pc","pc"]:
                     indexes = torch.arange(self.masking_fn.shape[1],device=self.device)
                     pc_mask = indexes[~torch.isin(indexes,pc_mask[pc_mask!=-1])]
                 img     = (img.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask] @ self.masking_fn[:,pc_mask].T).reshape(img.shape)
@@ -226,7 +227,7 @@ class ViTMAE(pl.LightningModule):
             self.avg_online_losses.append(np.mean(self.online_losses))
 
             accuracy_metric = getattr(self, f"online_{stage}_accuracy")
-            accuracy_metric(F.softmax(logits_cls, dim=-1), y.squeeze())
+            accuracy_metric(self.online_logit_fn(logits_cls), y.squeeze())
             self.log(
                 f"online_{stage}_accuracy",
                 accuracy_metric,
@@ -246,7 +247,7 @@ class ViTMAE(pl.LightningModule):
             logits = self.classifier(cls.detach())
 
             accuracy_metric = getattr(self, f"online_{stage}_accuracy")
-            accuracy_metric(F.softmax(logits, dim=-1), y.squeeze())
+            accuracy_metric(self.online_logit_fn(logits), y.squeeze())
             self.log(
                 f"online_{stage}_accuracy",
                 accuracy_metric,
@@ -260,7 +261,10 @@ class ViTMAE(pl.LightningModule):
                 if self.current_epoch+1 not in list(self.performance.keys()): 
                     self.performance[self.current_epoch+1]=[]
 
-            self.performance[self.current_epoch+1].append(sum(1*(torch.argmax(logits, dim=-1)==y.squeeze())).item())  
+            if len(y.squeeze().shape) > 1:
+                self.performance[self.current_epoch+1].append(sum(1*((self.online_logit_fn(logits)>0.5)==y.squeeze())).item())  
+            else: 
+                self.performance[self.current_epoch+1].append(sum(1*(torch.argmax(self.online_logit_fn(logits), dim=-1)==y.squeeze())).item())  
 
             return None
 

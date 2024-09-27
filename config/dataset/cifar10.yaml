@@ -8,6 +8,13 @@ data:
   channels: 3
   batch_size: 512
   patch_size: 8
+  eval_fn: 
+    _target_: nn.CrossEntropyLoss
+    reduction: mean
+  eval_logit_fn:
+    _target_: nn.Softmax
+    dim: -1
+  eval_type: multiclass
   str_patch_size:  ${convert_str:${data.patch_size}}
   mean: 
     _target_: torch.tensor

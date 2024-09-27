@@ -1,6 +1,7 @@
 import pytorch_lightning as pl
 import os
 import torch
+import torch.nn as nn
 from torchvision import datasets
 from torch.utils.data import Dataset, DataLoader
 import torchvision
@@ -49,15 +50,6 @@ class PairedDataset(Dataset):
         img1, y = self.dataset[idx]
         pc_mask = self.pc_mask
         if self.masking.type == "pc":
-            # if self.masking.strategy == "sampling_ratio":
-            #     pc_ratio      = float(np.random.randint(np.ceil(100*(self.eigenvalues[0]+self.eigenvalues[1])),99,1)[0]/100)
-            #     threshold     = self.find_threshold(self.eigenvalues,pc_ratio)
-            #     top_vs_bottom = np.random.randint(0,2,1)[0]
-            #     if top_vs_bottom == 0:
-            #         pc_mask = self.get_pcs_index(threshold)
-            #     else:
-            #         pc_mask = self.get_pcs_index(threshold,self.eigenvalues.shape[0])
-
             if self.masking.strategy == "sampling_pc":
                 index = torch.randperm(self.eigenvalues.shape[0]).numpy()
                 pc_ratio = np.random.randint(10,90,1)[0]/100
@@ -67,19 +59,11 @@ class PairedDataset(Dataset):
                 index = torch.randperm(self.eigenvalues.shape[0]).numpy()
                 threshold = self.find_threshold(self.eigenvalues[index],self.masking.pc_ratio)
                 pc_mask = index[:threshold]
-            # elif self.masking.strategy == "pc_block":
-            #     index = torch.randperm(self.eigenvalues.shape[0]).numpy()
-
-            # elif self.masking.strategy == "sampling_pc_block":
-            #     nb_block = np.random.randint(1,self.eigenvalues.shape[0]//(8*8),1)[0]
-            #     index = torch.randperm(self.eigenvalues.shape[0]//(8*8)).numpy()
-            #     blocks = index[:nb_block]
-            #     pc_mask = np.linspace(0,self.eigenvalues.shape[0]-(8*8),self.eigenvalues.shape[0]//(8*8),dtype=int)[blocks]
-            #     pc_mask = np.concatenate([np.arange(x,x+(8*8)) for x in pc_mask])
         elif self.masking.type == "pixel":
             if self.masking.strategy == "sampling":
                 pc_mask = float(np.random.randint(10,90,1)[0]/100)            
-        elif self.masking.type == "segmentation":
+        
+        if isinstance(y,list) and len(y)==2:
             pc_mask = y[1]
             y = y[0]
         return img1, y, pc_mask
@@ -123,14 +107,10 @@ class DataModule(pl.LightningDataModule):
         Pads the pc_mask to the size of the largest pc_mask in the batch.
         """
 
-        # Unpack the batch (which is a list of tuples)
         imgs, labels, pc_masks = zip(*batch)
-        # Find the maximum length of pc_mask in this batch
         max_len = max([pc_mask.size for pc_mask in pc_masks])
 
-        # Pad pc_masks to the same size
         padded_pc_masks = [torch.nn.functional.pad(torch.tensor(pc_mask), (0, max_len - pc_mask.size),value=-1) for pc_mask in pc_masks]
-        # Stack images, labels, and padded pc_masks
         imgs = torch.stack(imgs)  # Assuming images are tensors and can be stacked directly
         labels = torch.tensor(labels)  # Convert labels to tensor
         padded_pc_masks = torch.stack(padded_pc_masks)  # Stack the padded pc_masks

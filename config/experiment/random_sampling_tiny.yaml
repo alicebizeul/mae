@@ -1,7 +1,0 @@
-# @package _global_
-
-defaults:
-  - override /dataset: tinyimagenet
-  - override /model: vit-t
-  - override /masking: random_sampling
-

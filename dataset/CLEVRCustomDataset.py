@@ -18,32 +18,7 @@ img_tf = v2.Compose([
     v2.ToTensor()
 ])
 
-# class CLEVRCustomDataset(Dataset):
-#     def __init__(self, root_dir, transform=None):
-#         """
-#         Args:
-#             root_dir (string): Directory with all the images.
-#             transform (callable, optional): Optional transform to be applied
-#                 on a sample.
-#         """
-#         self.root_dir = root_dir
-#         self.transform = transform
-#         self.image_paths = [os.path.join(root_dir, fname) for fname in os.listdir(root_dir) if fname.endswith('.png')]
-# 
-#     def __len__(self):
-#         return len(self.image_paths)
-# 
-#     def __getitem__(self, idx):
-#         img_path = self.image_paths[idx]
-#         image = Image.open(img_path).convert("RGB")
-#         
-#         if self.transform:
-#             image = self.transform(image)
-# 
-#         return image
-
 L = 100000
-
 
 def segmask_to_box(m):
     box_mask = torch.zeros_like(m)
@@ -106,16 +81,8 @@ class CLEVRCustomDataset(Dataset):
         imgpath = f"{self.data_dir}/images/{self.split_indices[idx]}.png"
         img = Image.open(imgpath)
         anno = {}
-        # seed = np.random.randint(0, 2 ** 32)
-        # random.seed(seed)
-        # torch.manual_seed(seed)
 
-        # if self.transform is not None:
         img = img_tf(img).to(dtype=torch.float32)
-            # self.transform(img)
-        # img = self.transform(img)
-        # img = self.transform(img, no_color=True) \
-        #     if self.split == 'train' else self.transform(img)
 
         shape, color = self.shape[idx], self.color[idx]
         shape, color = shape[shape!=0], color[color!=0]
@@ -142,4 +109,3 @@ if __name__ == "__main__":
     dir_data = "/usr/scratch/data"
     load_masks = True
     train_dst = CLEVRCustomDataset(dir_data, load_masks=load_masks)
-    print(train_dst[0])

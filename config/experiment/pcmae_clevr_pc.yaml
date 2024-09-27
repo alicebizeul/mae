@@ -2,5 +2,6 @@
 
 defaults:
   - override /dataset: clevr
-  - override /model: vit-b
-  - override /masking: mae
+  - override /model: vit-t
+  - override /masking: pc_pc
+

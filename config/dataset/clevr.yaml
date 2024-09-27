@@ -6,8 +6,15 @@ data:
   height: 240
   width: 320
   channels: 3
-  batch_size: 64
+  batch_size: 128
   patch_size: 16
+  eval_fn: 
+    _target_: torch.nn.BCEWithLogitsLoss
+    reduction: mean
+  eval_logit_fn:
+    _target_: nn.Sigmoid
+    _: 
+  eval_type: multilabel
   str_patch_size:  ${convert_str:${data.patch_size}}
   mean: 
     _target_: torch.tensor
