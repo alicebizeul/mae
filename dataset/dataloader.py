@@ -37,6 +37,9 @@ class PairedDataset(Dataset):
                 if self.masking.strategy == "tvb": self.pc_mask = self.get_pcs_index(threshold,self.eigenvalues.shape[0])
             else: 
                 self.pc_mask = None
+        elif self.masking.type == "segmentation":
+            self.pc_mask = 0
+
     def __len__(self):
         return len(self.dataset)
 
@@ -76,6 +79,9 @@ class PairedDataset(Dataset):
         elif self.masking.type == "pixel":
             if self.masking.strategy == "sampling":
                 pc_mask = float(np.random.randint(10,90,1)[0]/100)            
+        elif self.masking.type == "segmentation":
+            pc_mask = y[1]
+            y = y[0]
         return img1, y, pc_mask
 
 class DataModule(pl.LightningDataModule):

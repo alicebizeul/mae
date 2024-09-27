@@ -1,4 +1,6 @@
 # outputs 
+.vscode
+logs
 ./output_log/
 /output_log/*
 ./outputs/ 
