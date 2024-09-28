@@ -64,3 +64,5 @@ extradata:
   eigenratiomodule:
     _target_: numpy.load
     file: ${base_data_home}/tiny-imagenet-200/train/eigenvalues_ratio.npy
+
+  pmae_random_resized_cropping: false

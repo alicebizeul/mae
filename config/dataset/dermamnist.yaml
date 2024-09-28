@@ -77,3 +77,4 @@ extradata:
   eigenratiomodule:
     _target_: numpy.load
     file: ${base_data_home}/medmnist/dermamnist_eigenvalues_ratio.npy
+  pmae_random_resized_cropping: false
