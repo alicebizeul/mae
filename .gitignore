@@ -7,9 +7,9 @@ logs
 outputs/*
 
 # bash scripts
-*.sh
-./scripts/
-/scripts/*
+# *.sh
+# ./scripts/
+# /scripts/*
 
 #figures
 ./figures
