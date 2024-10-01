@@ -1,0 +1,4 @@
+# @package _global_
+
+base_logs_home: /logs
+base_data_home: /data

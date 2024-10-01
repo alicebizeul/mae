@@ -11,12 +11,12 @@ In your environment of choice, install the necessary requirements
 Create a config file that suits your machine:
 
     cd ./config/user
-    cp abizeul_biomed.yaml myusername_mymachine.yaml
+    cp myusername_mymachine.yaml <myusername>_<mymachine>.yaml
 
 Adjust the paths to point to the directory you would like to use for storage of results and for fetching the data
 
 ### Training
-To launch experiments, you can find a good example for training at  ```./script/jobs_euler_pcmae_random.sh``` and ```./script/jobs_euler_eval_pcmae_random.sh``` for evaluation. Otherwise, you can run the following command to get started with training: 
+To launch experiments, you can find a good example for training at  ```./script/jobs_pcmae_random.sh``` and ```./script/jobs_eval_pcmae_random.sh``` for evaluation. Otherwise, you can run the following command to get started with training: 
 
     EXPERIMENT="mae_clevr"
     python main.py user=myusername_mymachine experiment=$EXPERIMENT run_tag=$EXPERIMENT"
@@ -24,14 +24,14 @@ To launch experiments, you can find a good example for training at  ```./script/
 The ```EXPERIMENT``` variable refers the experimental setting defined in ```./config/experiment/```. 
 
 ### Evaluation on linear probing
-To evaluate a checkpoint, you can gain inspiration from ```./config/user/callen_euler.yaml``` where I stored my runs. Then the following command gives an overview of how to launch the evaluation
+To evaluate a checkpoint, you can gain inspiration from ```./config/user/<myusername>_<mymachine>.yaml``` where I stored my runs. Then the following command gives an overview of how to launch the evaluation
 
-    EXPERIMENT="mae_clevr"
+    EXPERIMENT="mae_cifar10"
     EPOCH=800
     RUN_TAG="$EXPERIMENT_eval_$EPOCH"
-    python main.py user=callen_euler experiment=$DATASET trainer=eval checkpoint=pretrained checkpoint.epoch=$EPOCH run_tag=$RUN_TAG"
+    python main.py user=<myusername>_<mymachine> experiment=$DATASET trainer=eval checkpoint=pretrained checkpoint.epoch=$EPOCH run_tag=$RUN_TAG"
 
 
 ### Adding pointers to key aspect of the repo 
 
-A change in the masking strategy should be reflected in ```./dataset/dataloader.py``` file which define the image-masking pairs. At the moment, the mask only refers to a threshold; The change should also be reflected in ```./model/module.py``` where each batch is masked and passed through the model
+A change in the masking strategy should be reflected in ```./dataset/dataloader.py``` file which define the image-masking pairs. The change should also be reflected in ```./model/module.py``` where each batch is masked and passed through the model
