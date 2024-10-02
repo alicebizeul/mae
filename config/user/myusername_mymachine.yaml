@@ -6,7 +6,11 @@ base_data_home: /data
 
 checkpoint_folders:
   vit-t:
-    tinyimagenet:
-      pixel:
-        pixel:
-          _50: /mypath_logs_folder
+    cifar10:
+      pc:
+        pc:
+          _80:
+            _8: /mypath_logs_folder
+        pc_sampling:
+          _None: 
+            _8: /mypath_logs_folder
