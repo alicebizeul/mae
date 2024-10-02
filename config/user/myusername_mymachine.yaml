@@ -2,3 +2,11 @@
 
 base_logs_home: /logs
 base_data_home: /data
+
+
+checkpoint_folders:
+  vit-t:
+    tinyimagenet:
+      pixel:
+        pixel:
+          _50: /mypath_logs_folder
