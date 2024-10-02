@@ -7,9 +7,7 @@ TIME=120:00:00
 MEM_PER_CPU=2G
 MEM_PER_GPU=24G
 
-# DATASETs=(pcmae_tiny_pcsampling pcmae_tiny_ratiosampling pcmae_path_pcsampling)
-# DATASETs=(pcmae_tiny_pcsampling_block pcmae_path_pcsampling_block pcmae_derma_pcsampling_block pcmae_blood_pcsampling_block pcmae_cifar10_pcsampling_block )
-DATASETs=(pcmae_clevr_pcsampling)
+DATASETs=(pcmae_cifar10_pc pcmae_cifar10_pcsampling )
 
 for DATASET in "${DATASETs[@]}"
 do
