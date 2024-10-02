@@ -8,11 +8,8 @@ MEM_PER_CPU=2G
 MEM_PER_GPU=12G
 
 ##### MAE Baselines patch 8
-# DATASETs=(pcmae_cifar10_pcsampling pcmae_cifar10_ratiosampling pcmae_tiny_pcsampling pcmae_tiny_ratiosampling pcmae_derma_pcsampling pcmae_derma_ratiosampling pcmae_blood_pcsampling pcmae_blood_ratiosampling pcmae_path_pcsampling pcmae_path_ratiosampling)
-DATASETs=(pcmae_path_pcsampling pcmae_tiny_pcsampling pcmae_blood_pcsampling pcmae_derma_pcsampling pcmae_cifar10_pcsampling)
-
-EPOCHs=(100 200 300 400 500 600 700 800)
-# EPOCHs=(800)
+DATASETs=(pcmae_cifar10_pc pcmae_cifar10_pcsampling)
+EPOCHs=(800)
 
 for DATASET in "${DATASETs[@]}"
 do
