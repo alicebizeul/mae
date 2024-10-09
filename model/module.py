@@ -95,6 +95,7 @@ class ViTMAE(pl.LightningModule):
     def forward(self, x):
         return self.model(self.transformation(x))
 
+    @torch.no_grad()
     def get_current_masking_function(self, seg_mask):
         if self.masking.strategy == 'complete':
             seg_mask = seg_mask.max(dim=1).values.float()
