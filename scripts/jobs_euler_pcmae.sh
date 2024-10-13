@@ -13,8 +13,8 @@ MEM_PER_GPU=24G
 
 # DATASETs=(pcmae_blood_tvb pcmae_blood_bvt pcmae_cifar10_tvb pcmae_cifar10_bvt pcmae_derma_tvb pcmae_derma_bvt)
 # MASKs=(0.6 0.7 0.8 0.85 0.9)
-DATASETs=(pcmae_clevr_pc)
-MASKs=(0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9)
+DATASETs=(pcmae_cifar10_pc)
+MASKs=(0.1)
 
 for DATASET in "${DATASETs[@]}"
 do
