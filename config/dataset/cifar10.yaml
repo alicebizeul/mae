@@ -77,3 +77,4 @@ extradata:
     _target_: numpy.load
     file: ${base_data_home}/cifar-10-batches-py/eigenvalues_ratio.npy
 
+  pmae_random_resized_cropping: false

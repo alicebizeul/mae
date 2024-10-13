@@ -90,3 +90,4 @@ extradata:
     file: ${base_data_home}/cifar-10-batches-py/pc_matrix.npy
     # file: ""
 
+  pmae_random_resized_cropping: false

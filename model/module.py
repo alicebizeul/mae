@@ -17,6 +17,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from utils import save_reconstructed_images, save_attention_maps, save_attention_maps_batch
 from plotting import plot_loss, plot_performance
+import kornia.augmentation as K_transformations
+from kornia.constants import Resample
+from dataset.CLEVRCustomDataset import CLEVRCustomDataset
 
 class ViTMAE(pl.LightningModule):
 
@@ -53,6 +56,17 @@ class ViTMAE(pl.LightningModule):
 
         if self.masking.type == "pc":
             self.register_buffer("masking_fn",torch.Tensor(self.datamodule.extra_data.pcamodule.T))
+            self.random_resized_crop = nn.Identity()
+            if self.datamodule.extra_data.pmae_random_resized_cropping:
+                size = self.image_size
+                if isinstance(size, int):
+                    size = (size, size)
+                size = tuple(size)
+                self.random_resized_crop = K_transformations.RandomResizedCrop(
+                    size=self.image_size,
+                    scale=(0.2,1.0),
+                    resample=Resample.BICUBIC.name
+                )
         elif self.masking.type == "random":
             self.register_buffer("masking_fn",nn.Linear())
         elif self.masking.type == "segmentation":
@@ -81,6 +95,7 @@ class ViTMAE(pl.LightningModule):
     def forward(self, x):
         return self.model(self.transformation(x))
 
+    @torch.no_grad()
     def get_current_masking_function(self, seg_mask):
         if self.masking.strategy == 'complete':
             seg_mask = seg_mask.max(dim=1).values.float()
@@ -119,7 +134,7 @@ class ViTMAE(pl.LightningModule):
 
         # Invert mask because we keep patches with 0
         patched_seg_mask = 1 - patched_seg_mask
-        
+
         # Get indices such that, per batch, the first indices correspond
         # to '0', i.e., keep, and the last indices to '1', i.e., mask within the patched_seg_mask
         ids_sort = torch.argsort(patched_seg_mask, dim=1).to(
@@ -171,6 +186,11 @@ class ViTMAE(pl.LightningModule):
                     indexes = torch.arange(self.masking_fn.shape[1],device=self.device)
                     pc_mask = indexes[~torch.isin(indexes,pc_mask[pc_mask!=-1])]
                 img     = (img.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask] @ self.masking_fn[:,pc_mask].T).reshape(img.shape)
+                if not isinstance(self.datamodule.train_dataset.dataset, CLEVRCustomDataset):
+                    img = self.random_resized_crop(img)
+                    target = self.random_resized_crop(
+                        target, params=self.random_resized_crop._params
+                    )
 
             elif self.masking.type == "pixel":
                 if self.masking.strategy == "sampling":
