@@ -11,8 +11,8 @@ TIME=120:00:00
 MEM_PER_CPU=2G
 MEM_PER_GPU=24G
 
-# DATASETs=(pcmae_tiny_pcsampling pcmae_tiny_ratiosampling pcmae_cifar10_pcsampling pcmae_cifar10_ratiosampling pcmae_blood_pcsampling pcmae_blood_ratiosampling pcmae_path_pcsampling pcmae_path_ratiosampling pcmae_derma_pcsampling pcmae_derma_ratiosampling)
-DATASETs=(pcmae_clevr_pcsampling)
+DATASETs=(pcmae_tiny_pcsampling pcmae_path_pcsampling pcmae_cifar10_pcsampling pcmae_blood_pcsampling pcmae_derma_pcsampling)
+# DATASETs=(pcmae_clevr_pcsampling)
 
 MODEL="vit-b"
 for DATASET in "${DATASETs[@]}"

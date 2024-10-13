@@ -26,11 +26,13 @@ class ViTMAE_knn(pl.LightningModule):
         save_dir: str =None,
         evaluated_epoch: int =800,
         datamodule: Optional[pl.LightningDataModule] = None,
+        task :int =0,
         ):
         super().__init__()
         self.model = model  # Your base model (e.g., ResNet or any other embedding model)
         self.model.config.mask_ratio = 0.0
         self.model.vit.embeddings.config.mask_ratio=0.0
+        self.task=task
 
         self.k = k  # Number of nearest neighbors
 
@@ -70,7 +72,7 @@ class ViTMAE_knn(pl.LightningModule):
             # Get the indices of the k nearest neighbors
             for k in self.k:
                 _, indices = torch.topk(distances, k=k, dim=1, largest=False)
-                pred_labels, _ = torch.mode(self.data_labels[indices].squeeze(), dim=1)
+                pred_labels, _ = torch.mode(self.data_labels[indices].squeeze())
                 accuracy_metric(pred_labels.squeeze(), y.squeeze())
 
                 self.log(
@@ -113,7 +115,7 @@ class ViTMAE_knn(pl.LightningModule):
 
     def on_fit_end(self):
         # Write to a CSV file
-        with open(os.path.join(self.save_dir,f'performance_final_{self.evaluated_epoch}_knn.csv'), 'w', newline='') as csvfile:
+        with open(os.path.join(self.save_dir,f'performance_final_{self.evaluated_epoch}_knn_task_{self.task}.csv'), 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(['Eval Epoch', 'Test Accuracy'])
             for epoch in list(self.performance.keys()):

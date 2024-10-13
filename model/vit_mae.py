@@ -113,7 +113,7 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
         )
         return pixel_values
 
-    def forward_loss(self, pixel_values, pred, mask, interpolate_pos_encoding: bool = False):
+    def forward_loss(self, pixel_values, pred, mask, interpolate_pos_encoding: bool = False, patchify=True):
         """
         Args:
             pixel_values (`torch.FloatTensor` of shape `(batch_size, num_channels, height, width)`):
@@ -128,7 +128,8 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
         Returns:
             `torch.FloatTensor`: Pixel reconstruction loss.
         """
-        target = self.patchify(pixel_values, interpolate_pos_encoding=interpolate_pos_encoding)
+        if patchify:
+            target = self.patchify(pixel_values, interpolate_pos_encoding=interpolate_pos_encoding)
         if self.config.norm_pix_loss:
             mean = target.mean(dim=-1, keepdim=True)
             var = target.var(dim=-1, keepdim=True)

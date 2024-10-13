@@ -13,6 +13,7 @@ from torchvision.transforms.functional import InterpolationMode
 import random
 import torchvision.datasets
 import time
+from dataset.CLEVRCustomDataset import CLEVRCustomDataset
 
 USER_NAME = os.environ.get("USER")
 
@@ -49,6 +50,10 @@ class PairedDataset(Dataset):
         # Load the images
         img1, y = self.dataset[idx]
         pc_mask = self.pc_mask
+
+        if isinstance(y,list) and len(y)==2:
+            pc_mask = y[1]
+            y = y[0]
         if self.masking.type == "pc":
             if self.masking.strategy == "sampling_pc":
                 index = torch.randperm(self.eigenvalues.shape[0]).numpy()
@@ -62,10 +67,7 @@ class PairedDataset(Dataset):
         elif self.masking.type == "pixel":
             if self.masking.strategy == "sampling":
                 pc_mask = float(np.random.randint(10,90,1)[0]/100)            
-        
-        if isinstance(y,list) and len(y)==2:
-            pc_mask = y[1]
-            y = y[0]
+        print("this is it",img1.shape,y)
         return img1, y, pc_mask
 
 class DataModule(pl.LightningDataModule):
@@ -112,14 +114,18 @@ class DataModule(pl.LightningDataModule):
 
         padded_pc_masks = [torch.nn.functional.pad(torch.tensor(pc_mask), (0, max_len - pc_mask.size),value=-1) for pc_mask in pc_masks]
         imgs = torch.stack(imgs)  # Assuming images are tensors and can be stacked directly
-        labels = torch.tensor(labels)  # Convert labels to tensor
+        print("Alice is here")
+        if isinstance(labels,tuple):
+            labels = torch.stack(labels)
+        else:
+            labels = torch.tensor(labels)  # Convert labels to tensor
         padded_pc_masks = torch.stack(padded_pc_masks)  # Stack the padded pc_masks
 
         return imgs, labels, padded_pc_masks
 
     def train_dataloader(self) -> DataLoader:
         training_loader = DataLoader(
-            self.train_dataset, batch_size=self.batch_size, shuffle=True, drop_last=False, num_workers=self.num_workers, collate_fn=self.collate_fn if self.masking.type == "pc" and self.masking.strategy in ["sampling_pc","sampling_ratio","sampling_pc_block","pc"] else None
+            self.train_dataset, batch_size=self.batch_size, shuffle=True, drop_last=False, num_workers=self.num_workers, collate_fn=self.collate_fn if (self.masking.type == "pc" and self.masking.strategy in ["sampling_pc","sampling_ratio","sampling_pc_block","pc"]) else None
         )
         return training_loader
 

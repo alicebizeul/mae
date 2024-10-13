@@ -12,27 +12,26 @@ data:
     _target_: torch.nn.BCEWithLogitsLoss
     reduction: mean
   eval_logit_fn:
-    _target_: nn.Sigmoid
-    _: 
-  eval_type: multilabel
+    _target_: torch.nn.Sigmoid
+  eval_type: binary
   str_patch_size:  ${convert_str:${data.patch_size}}
   mean: 
     _target_: torch.tensor
     data: 
       _target_: numpy.load
-      file: 
+      file:  ${datasets.train.root}/CLEVR_v1.0/images/clevr_mean.npy
   std: 
     _target_: torch.tensor
     data: 
       _target_: numpy.load
-      file: 
-  classes: 24
+      file:  ${datasets.train.root}/CLEVR_v1.0/images/clevr_std.npy
+  classes: 1
+  task: 24
 
 datasets:
   train:
     _target_: dataset.CLEVRCustomDataset.CLEVRCustomDataset
     root: ${base_data_home}
-    # transform: ${transformation.train}
     transform: None
     split: "train"
     morph: "none"
@@ -51,7 +50,6 @@ datasets:
   test:
     _target_: dataset.CLEVRCustomDataset.CLEVRCustomDataset
     root: ${base_data_home}
-    # transform: ${transformation.val}
     transform: None
     split: "test"
     morph: "none"
@@ -70,7 +68,7 @@ datamodule:
 
 datamodule_eval:
   _target_: dataset.dataloader.DataModule
-  batch_size: ${data.batch_size}
+  batch_size: ${divide:${data.batch_size},2}
   num_workers: ${datamodule.num_workers}
   classes: ${data.classes}
   channels: ${data.channels}
@@ -82,11 +80,8 @@ extradata:
   # TODO: Set correct paths for pca extradata
   pcamodule:
     _target_ : numpy.load
-    file: ${base_data_home}/cifar-10-batches-py/pc_matrix.npy
-    # file: ""
+    file: ${base_data_home}/CLEVR_v1.0/images/clevr_pc_matrix_reduced.npy
 
   eigenratiomodule:
     _target_: numpy.load
-    file: ${base_data_home}/cifar-10-batches-py/pc_matrix.npy
-    # file: ""
-
+    file: ${base_data_home}/CLEVR_v1.0/images/clevr_eigenvalues_ratio_reduced.npy

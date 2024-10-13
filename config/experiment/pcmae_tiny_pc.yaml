@@ -2,7 +2,7 @@
 
 defaults:
   - override /dataset: tinyimagenet
-  - override /model: vit-t
+  - override /model: vit-b
   - override /masking: pc_pc
   - override /transformations: mae_adapted
 

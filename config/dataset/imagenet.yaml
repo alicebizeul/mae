@@ -9,9 +9,9 @@ data:
   patch_size: 16
   batch_size: 128
   eval_fn: 
-    _target_: nn.CrossEntropyLoss
+    _target_: torch.nn.CrossEntropyLoss
   eval_logit_fn:
-    _target_: nn.Softmax
+    _target_: torch.nn.Softmax
     dim: -1
   eval_type: multiclass
   str_patch_size: ${convert_str:${data.patch_size}}

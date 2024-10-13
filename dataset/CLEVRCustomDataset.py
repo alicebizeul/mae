@@ -2,10 +2,16 @@ import os
 from PIL import Image
 import torch
 from torch.utils.data import Dataset
-
+import sys
+sys.path.append("/cluster/home/callen/projects/mae")
+from utils import Normalize
 import numpy as np
 from scipy.ndimage.morphology import binary_erosion, binary_dilation
 from torchvision.transforms import v2
+
+
+mean = torch.tensor(np.reshape(np.load('/cluster/project/sachan/callen/data_alice/CLEVR_v1.0/images/clevr_mean.npy'),[3,224,224]))
+std = torch.tensor(np.reshape(np.load('/cluster/project/sachan/callen/data_alice/CLEVR_v1.0/images/clevr_std.npy'),[3,224,224]))
 
 mask_tf = v2.Compose([
     v2.PILToTensor(),
@@ -15,7 +21,8 @@ mask_tf = v2.Compose([
 img_tf = v2.Compose([
     # v2.PILToTensor(),
     v2.Resize(size=[224, 224]),
-    v2.ToTensor()
+    v2.ToTensor(),
+    Normalize(mean,std)
 ])
 
 L = 100000

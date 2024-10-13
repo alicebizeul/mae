@@ -17,6 +17,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from utils import save_reconstructed_images, save_attention_maps, save_attention_maps_batch
 from plotting import plot_loss, plot_performance
+import kornia.augmentation as K_transformations
+from kornia.constants import Resample
+from dataset.CLEVRCustomDataset import CLEVRCustomDataset
 
 class ViTMAE(pl.LightningModule):
 
@@ -53,6 +56,18 @@ class ViTMAE(pl.LightningModule):
 
         if self.masking.type == "pc":
             self.register_buffer("masking_fn",torch.Tensor(self.datamodule.extra_data.pcamodule.T))
+            
+            self.random_resized_crop = nn.Identity()
+            size = self.image_size
+            if isinstance(size, int):
+                size = (size, size)
+            size = tuple(size)
+            self.random_resized_crop = K_transformations.RandomResizedCrop(
+                size=size,
+                scale=(0.2,1.0),
+                resample=Resample.BICUBIC.name
+            )
+        
         elif self.masking.type == "random":
             self.register_buffer("masking_fn",nn.Linear())
         elif self.masking.type == "segmentation":
@@ -66,10 +81,10 @@ class ViTMAE(pl.LightningModule):
         self.online_classifier_loss = eval_fn
         self.online_logit_fn= eval_logit_fn
         self.online_train_accuracy = torchmetrics.Accuracy(
-                    task=eval_type, num_classes=self.num_classes, num_labels=self.num_classes, top_k=1
+                    task=eval_type, num_classes=self.num_classes, top_k=1
         )
         self.online_val_accuracy = torchmetrics.Accuracy(
-                    task=eval_type, num_classes=self.num_classes, num_labels=self.num_classes, top_k=1
+                    task=eval_type, num_classes=self.num_classes, top_k=1
         ) 
         self.save_dir = save_dir
         self.train_losses = []
@@ -100,7 +115,7 @@ class ViTMAE(pl.LightningModule):
             num_patches_per_mask = torch.randint(
                 low=0,
                 high=max_patches_per_element,
-                size=(batch_size, n_masks, max_patches_per_element),
+                size=(batch_size, n_masks, int(self.datamodule.masking.pixel_ratio*max_patches_per_element)),
             ).to(seg_mask.device)
             # Gather indices to and set them to zero
             index_to_mask = torch.gather(sorted_order, dim=-1, index=num_patches_per_mask).long()
@@ -161,16 +176,27 @@ class ViTMAE(pl.LightningModule):
         if stage == "train":
             img, y, pc_mask = batch
 
+            # CLEVR
+            if y.shape[1] > 1:
+                y = y[:,:1]
+
             # mae training
             head_mask = None # Masking sequence after self attention heads
             if self.masking.type == "pc":
                 pc_mask = pc_mask[0]
-                target  = (img.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask] @ self.masking_fn[:,pc_mask].T).reshape(img.shape)
+                target  = (img.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask])
 
                 if self.masking.strategy in ["sampling_pc","pc"]:
                     indexes = torch.arange(self.masking_fn.shape[1],device=self.device)
-                    pc_mask = indexes[~torch.isin(indexes,pc_mask[pc_mask!=-1])]
-                img     = (img.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask] @ self.masking_fn[:,pc_mask].T).reshape(img.shape)
+                    pc_mask_input = indexes[~torch.isin(indexes,pc_mask[pc_mask!=-1])]
+                img     = (img.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask_input] @ self.masking_fn[:,pc_mask_input].T).reshape(img.shape)
+
+
+                if not isinstance(self.datamodule.train_dataset.dataset, CLEVRCustomDataset):
+                    img = self.random_resized_crop(img)
+                    target = self.random_resized_crop(
+                        target, params=self.random_resized_crop._params
+                    )
 
             elif self.masking.type == "pixel":
                 if self.masking.strategy == "sampling":
@@ -187,10 +213,16 @@ class ViTMAE(pl.LightningModule):
             outputs, cls = self.model(img,return_rep=False, head_mask=head_mask)
             if self.masking.type == "segmentation":
                 self.model.vit.embeddings.random_masking = original_masking_fn
+
             reconstruction = self.model.unpatchify(outputs.logits)
             mask = outputs.mask.unsqueeze(-1).repeat(1, 1, self.model.config.patch_size**2 *3)  # (N, H*W, p*p*3)
             mask = self.model.unpatchify(mask)
-            loss_mae = self.model.forward_loss(target,outputs.logits,outputs.mask)
+
+            if self.masking.type == "pc":
+                outputs.logits = reconstruction.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask]
+                outputs.mask = torch.ones_like(mask.reshape([mask.shape[0],-1]),device=self.device)
+
+            loss_mae = self.model.forward_loss(target,outputs.logits,outputs.mask,patchify=False if self.masking.type == "pc" else True)
 
             self.log(
                 f"{stage}_mae_loss", 
@@ -220,14 +252,14 @@ class ViTMAE(pl.LightningModule):
 
             # online classifier
             logits_cls = self.classifier(cls.detach())
-            loss_ce = self.online_classifier_loss(logits_cls,y.squeeze())
+            loss_ce = self.online_classifier_loss(logits_cls.squeeze(),y.squeeze())
 
             self.log(f"{stage}_classifier_loss", loss_ce, sync_dist=True)
             self.online_losses.append(loss_ce.item())
             self.avg_online_losses.append(np.mean(self.online_losses))
 
             accuracy_metric = getattr(self, f"online_{stage}_accuracy")
-            accuracy_metric(self.online_logit_fn(logits_cls), y.squeeze())
+            accuracy_metric(self.online_logit_fn(logits_cls.squeeze()), y.squeeze())
             self.log(
                 f"online_{stage}_accuracy",
                 accuracy_metric,
@@ -243,11 +275,14 @@ class ViTMAE(pl.LightningModule):
 
         else:
             img, y = batch
+            # CLEVR
+            if y.shape[1] > 1:
+                y = y[:,:1]
             cls, _ = self.model(img,return_rep=True)
             logits = self.classifier(cls.detach())
 
             accuracy_metric = getattr(self, f"online_{stage}_accuracy")
-            accuracy_metric(self.online_logit_fn(logits), y.squeeze())
+            accuracy_metric(self.online_logit_fn(logits.squeeze()), y.squeeze())
             self.log(
                 f"online_{stage}_accuracy",
                 accuracy_metric,
@@ -260,11 +295,10 @@ class ViTMAE(pl.LightningModule):
             if batch_idx == 0:
                 if self.current_epoch+1 not in list(self.performance.keys()): 
                     self.performance[self.current_epoch+1]=[]
-
             if len(y.squeeze().shape) > 1:
-                self.performance[self.current_epoch+1].append(sum(1*((self.online_logit_fn(logits)>0.5)==y.squeeze())).item())  
+                self.performance[self.current_epoch+1].append(sum(sum(1*((self.online_logit_fn(logits.squeeze())>0.5)==y.squeeze()))).item())  
             else: 
-                self.performance[self.current_epoch+1].append(sum(1*(torch.argmax(self.online_logit_fn(logits), dim=-1)==y.squeeze())).item())  
+                self.performance[self.current_epoch+1].append(sum(1*(torch.argmax(self.online_logit_fn(logits.squeeze()), dim=-1)==y.squeeze())).item())  
 
             return None
 

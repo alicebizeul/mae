@@ -30,7 +30,11 @@ class ViTMAE_lin(pl.LightningModule):
         warmup: int =10,
         datamodule: Optional[pl.LightningDataModule] = None,
         save_dir: str =None,
-        evaluated_epoch: int =800
+        evaluated_epoch: int =800,
+        eval_type ="multiclass",
+        eval_fn =nn.CrossEntropyLoss(),
+        eval_logit_fn = nn.Softmax(),
+        task :int =0,
     ):
         super().__init__()
         self.learning_rate = learning_rate
@@ -42,6 +46,7 @@ class ViTMAE_lin(pl.LightningModule):
         self.image_size = datamodule.image_size
         self.warm_up = warmup
         self.evaluated_epoch = evaluated_epoch
+        self.task = task
 
         model.delete_decoder()
         self.model = model
@@ -49,18 +54,23 @@ class ViTMAE_lin(pl.LightningModule):
         self.model.vit.embeddings.config.mask_ratio=0.0
         self.classifier = nn.Linear(model.config.hidden_size, self.num_classes)
 
-        self.online_classifier_loss = nn.CrossEntropyLoss()
+        self.online_classifier_loss = eval_fn
+        self.online_logit_fn= eval_logit_fn
         self.online_train_accuracy = torchmetrics.Accuracy(
-                    task="multiclass", num_classes=self.num_classes, top_k=1
+                    task=eval_type, num_classes=self.num_classes, top_k=1
         )
         self.online_val_accuracy = torchmetrics.Accuracy(
-                    task="multiclass", num_classes=self.num_classes, top_k=1
+                    task=eval_type, num_classes=self.num_classes, top_k=1
+        )
+        self.online_val_f1 = torchmetrics.F1Score(
+                    task=eval_type, num_classes=self.num_classes, top_k=1, average = "macro"
         ) 
 
         self.save_dir = save_dir
         self.train_losses = []
         self.avg_train_losses = []
         self.performance = {}
+        self.f1scores = {}
 
     def forward(self, x):
         return self.model(x)
@@ -68,14 +78,16 @@ class ViTMAE_lin(pl.LightningModule):
     def shared_step(self, batch: Tensor, stage: str = "train", batch_idx: int =None):
         if stage == "train":
             img, y, _ = batch
-
+            if len(y.shape)>1:
+                y = y[:,self.task]
             cls, _ = self.model(img,return_rep=True)
             logits = self.classifier(cls.detach())
-            loss_ce = self.online_classifier_loss(logits,y.squeeze())
+
+            loss_ce = self.online_classifier_loss(logits.squeeze(),y.squeeze())
             self.log(f"final_{stage}_classifier_loss_{self.evaluated_epoch}_lin", loss_ce, sync_dist=True)
 
             accuracy_metric = getattr(self, f"online_{stage}_accuracy")
-            accuracy_metric(F.softmax(logits, dim=-1), y.squeeze())
+            accuracy_metric(self.online_logit_fn(logits.squeeze()), y.squeeze())
             self.log(
                 f"final_{stage}_accuracy_{self.evaluated_epoch}_lin",
                 accuracy_metric,
@@ -88,17 +100,19 @@ class ViTMAE_lin(pl.LightningModule):
 
             if (self.current_epoch+1)%10==0 and batch_idx==0:
                 plot_loss(self.avg_train_losses,name_loss="X-Entropy",save_dir=self.save_dir,name_file=f"_eval_train_{self.evaluated_epoch}_lin")
-
             return  loss_ce
 
         else:
             img, y = batch
-            
+
+            if len(y.shape)>1:
+                y = y[:,self.task]
+
             cls, attentions = self.model(img,return_rep=True,output_attentions=True)
             logits = self.classifier(cls.detach())
 
             accuracy_metric = getattr(self, f"online_{stage}_accuracy")
-            accuracy_metric(F.softmax(logits, dim=-1), y.squeeze())
+            accuracy_metric(self.online_logit_fn(logits.squeeze()), y.squeeze())
             self.log(
                 f"final_{stage}_accuracy_{self.evaluated_epoch}_lin",
                 accuracy_metric,
@@ -110,7 +124,17 @@ class ViTMAE_lin(pl.LightningModule):
 
             if batch_idx == 0 and (self.current_epoch+1) not in list(self.performance.keys()): 
                 self.performance[self.current_epoch+1]=[]
-            self.performance[self.current_epoch+1].append(sum(1*(torch.argmax(logits, dim=-1)==y.squeeze())).item())  
+                if len(y.squeeze().shape) >1:
+                    self.f1scores[self.current_epoch+1]=[]
+
+            if len(y.squeeze().shape) > 1:
+                f1_metric = getattr(self, f"online_{stage}_f1")
+                f1_score = f1_metric(self.online_logit_fn(logits.squeeze()), y.squeeze())
+                self.performance[self.current_epoch+1].append(sum(1*((self.online_logit_fn(logits.squeeze())>0.5)==y.squeeze())).detach().cpu().numpy())  
+                self.f1scores[self.current_epoch+1].append(f1_score.detach().cpu().numpy())  
+
+            else:
+                self.performance[self.current_epoch+1].append(sum(1*(torch.argmax(logits.squeeze(), dim=-1)==y.squeeze())).item())  
 
             # check the attention we get at final
             if self.current_epoch==0 and batch_idx==0:
@@ -125,18 +149,35 @@ class ViTMAE_lin(pl.LightningModule):
             return None    
 
     def on_validation_epoch_end(self):
+        if isinstance(self.performance[self.current_epoch+1][0],np.ndarray):
+            self.performance[self.current_epoch+1] = np.array(self.performance[self.current_epoch+1])
+            self.f1scores[self.current_epoch+1] = np.array(self.f1scores[self.current_epoch+1])
+
         self.performance[self.current_epoch+1] = sum(self.performance[self.current_epoch+1])/self.datamodule.num_val_samples
-        if (self.current_epoch+1)%10 == 0:
+
+        if isinstance(self.performance[self.current_epoch+1],np.ndarray):
+           self.performance[self.current_epoch+1] = np.mean(self.performance[self.current_epoch+1]) 
+           self.f1scores[self.current_epoch+1] = np.mean(self.f1scores[self.current_epoch+1])
+
+        if (self.current_epoch+1)%10 == 0 and not isinstance(self.performance[self.current_epoch+1],np.ndarray):
             plot_performance(list(self.performance.keys()),list(self.performance.values()),self.save_dir,name=f"val_final_{self.evaluated_epoch}_lin")
 
     def on_fit_end(self):
         # Write to a CSV file
-        with open(os.path.join(self.save_dir,f'performance_final_{self.evaluated_epoch}_lin.csv'), 'w', newline='') as csvfile:
+        with open(os.path.join(self.save_dir,f'performance_final_{self.evaluated_epoch}_lin_task_{self.task}.csv'), 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(['Eval Epoch', 'Test Accuracy'])
             for epoch in list(self.performance.keys()):
                 # Assuming you have the accuracy for each epoch stored in a list
                 writer.writerow([epoch, round(100*self.performance[epoch],2)])  
+
+        if len(self.f1scores.keys()) > 1 :
+            with open(os.path.join(self.save_dir,f'f1scores_final_{self.evaluated_epoch}_lin_task_{self.task}.csv'), 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(['Eval Epoch', 'Test Accuracy'])
+                for epoch in list(self.f1scores.keys()):
+                    # Assuming you have the accuracy for each epoch stored in a list
+                    writer.writerow([epoch, round(100*self.f1scores[epoch],2)])    
         return 
 
     def training_step(self, batch, batch_idx):

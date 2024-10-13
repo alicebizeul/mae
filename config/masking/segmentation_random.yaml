@@ -3,8 +3,8 @@
 masking:
   type: segmentation
   strategy: random
-  pixel_ratio: null
   pc_ratio: 0.0
+  pixel_ratio: 0.75
   ratio:  ${decimal_2_percent:${masking.pixel_ratio}}
   str_ratio: ${convert_str:${masking.ratio}}
 

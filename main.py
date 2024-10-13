@@ -114,23 +114,26 @@ def main(config: DictConfig) -> None:
         masking = {"type":"pixel","strategy":"pixel"},
         data = config.datasets,
     )
-    model_eval = instantiate(
-        config=config.pl_module_eval,
-        model=model_train.model,
-        datamodule=datamodule,
-        save_dir=config.local_dir
-    )
-    del model_train, trainer, vit
-    evaluator = pl.Trainer(
-            **eval_configs,
-            logger=wandb_logger,
-            enable_checkpointing = False,
-            num_sanity_val_steps=0,
-            check_val_every_n_epoch=1
+    
+    del trainer, vit
+    for i in range(config.data.task):
+        model_eval = instantiate(
+            config=config.pl_module_eval,
+            model=model_train.model,
+            datamodule=datamodule,
+            save_dir=config.local_dir,
+            task=i
         )
-    print("------------------------- Start Evaluation: lin probe")
-    evaluator.fit(model_eval, datamodule=datamodule)
-    print("------------------------- End Evaluation: lin probe")
+        evaluator = pl.Trainer(
+                **eval_configs,
+                logger=wandb_logger,
+                enable_checkpointing = False,
+                num_sanity_val_steps=0,
+                check_val_every_n_epoch=1
+            )
+        print(f"------------------------- Start Evaluation: lin probe for task {i}")
+        evaluator.fit(model_eval, datamodule=datamodule)
+        print(f"------------------------- End Evaluation: lin probe for task {i}")
 
 
 if __name__ == "__main__":

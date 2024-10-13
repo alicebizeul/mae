@@ -12,7 +12,7 @@ MEM_PER_CPU=2G
 MEM_PER_GPU=12G
 
 # DATASETs=(mae_sampling_tiny mae_sampling_blood mae_sampling_path mae_sampling_derma mae_sampling_cifar10)
-DATASETs=(mae_sampling_tiny mae_sampling_path)
+DATASETs=(mae_sampling_tiny mae_sampling_path mae_sampling_cifar10 mae_sampling_blood mae_sampling_derma )
 
 MODEL="vit-b"
 # EPOCHs=(100 200 300 400 500 600 700 800)

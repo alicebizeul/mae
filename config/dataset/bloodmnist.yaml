@@ -9,10 +9,10 @@ data:
   batch_size: 512
   patch_size: 8
   eval_fn: 
-    _target_: nn.CrossEntropyLoss
+    _target_: torch.nn.CrossEntropyLoss
     reduction: mean
   eval_logit_fn:
-    _target_: nn.Softmax
+    _target_: torch.nn.Softmax
     dim: -1
   eval_type: multiclass
   str_patch_size: ${convert_str:${data.patch_size}}
@@ -27,6 +27,7 @@ data:
       _target_: numpy.load
       file: ${datasets.train.root}/bloodmnist_std_reshaped.npy
   classes: 8
+  task: 1
 
 datasets:
   train:
@@ -72,8 +73,9 @@ datamodule_eval:
 extradata:
   pcamodule:
     _target_ : numpy.load
-    file: ${base_data_home}/medmnist/bloodmnist_pc_matrix.npy
+    file: ${base_data_home}/medmnist/bloodmnist_pc_matrix_reduced.npy
 
   eigenratiomodule:
     _target_: numpy.load
-    file: ${base_data_home}/medmnist/bloodmnist_eigenvalues_ratio.npy
+    file: ${base_data_home}/medmnist/bloodmnist_eigenvalues_ratio_reduced.npy
+
