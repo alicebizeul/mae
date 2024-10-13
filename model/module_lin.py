@@ -6,7 +6,6 @@ import torch.nn as nn
 from typing import Optional, Dict, List, Any
 import torch.nn.functional as F
 from torch.nn.parameter import Parameter
-# from model_zoo.scattering_network import Scattering2dResNet
 from torchvision.models import resnet18
 from torch import Tensor
 import wandb
@@ -16,6 +15,8 @@ import numpy as np
 from utils import save_reconstructed_images, save_attention_maps, save_attention_maps_batch
 from plotting import plot_loss, plot_performance
 import csv
+import kornia.augmentation as K_transformations
+from kornia.constants import Resample
 
 class ViTMAE_lin(pl.LightningModule):
 
@@ -68,7 +69,7 @@ class ViTMAE_lin(pl.LightningModule):
     def shared_step(self, batch: Tensor, stage: str = "train", batch_idx: int =None):
         if stage == "train":
             img, y, _ = batch
-
+            
             cls, _ = self.model(img,return_rep=True)
             logits = self.classifier(cls.detach())
             loss_ce = self.online_classifier_loss(logits,y.squeeze())

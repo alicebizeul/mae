@@ -56,17 +56,14 @@ class ViTMAE(pl.LightningModule):
 
         if self.masking.type == "pc":
             self.register_buffer("masking_fn",torch.Tensor(self.datamodule.extra_data.pcamodule.T))
-            self.random_resized_crop = nn.Identity()
-            if self.datamodule.extra_data.pmae_random_resized_cropping:
-                size = self.image_size
-                if isinstance(size, int):
-                    size = (size, size)
-                size = tuple(size)
-                self.random_resized_crop = K_transformations.RandomResizedCrop(
-                    size=self.image_size,
-                    scale=(0.2,1.0),
-                    resample=Resample.BICUBIC.name
-                )
+            size = self.image_size
+            if isinstance(size, int):
+                size = (size, size)
+            self.random_resized_crop = K_transformations.RandomResizedCrop(
+                size=tuple(size),
+                scale=(0.2,1.0),
+                resample=Resample.BICUBIC.name
+            )
         elif self.masking.type == "random":
             self.register_buffer("masking_fn",nn.Linear())
         elif self.masking.type == "segmentation":
