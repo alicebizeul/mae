@@ -2,6 +2,7 @@
 
 defaults:
   - override /checkpoint: pretrained
+  - override /transformations: mae
 
 trainer:
   max_epochs: 0

@@ -15,7 +15,7 @@ pl_module_eval:
   evaluated_epoch: ${evaluated_epoch}
   k:
     _target_: numpy.arange
-    start: 1
+    start: 2
     stop: 20
 
 # overriding so that we get where we were if only just evaluating a run
