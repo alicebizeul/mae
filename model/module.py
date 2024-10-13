@@ -172,6 +172,9 @@ class ViTMAE(pl.LightningModule):
     def shared_step(self, batch: Tensor, stage: str = "train", batch_idx: int = None):
         if stage == "train":
             img, y, pc_mask = batch
+            # CLEVR
+            if y.shape[1] > 1:
+                y = y[:,:1]
 
             # mae training
             head_mask = None # Masking sequence after self attention heads
@@ -260,6 +263,10 @@ class ViTMAE(pl.LightningModule):
 
         else:
             img, y = batch
+            # CLEVR
+            if y.shape[1] > 1:
+                y = y[:,:1]
+
             cls, _ = self.model(img,return_rep=True)
             logits = self.classifier(cls.detach())
 
