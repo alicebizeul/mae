@@ -241,14 +241,14 @@ class ViTMAE(pl.LightningModule):
 
             # online classifier
             logits_cls = self.classifier(cls.detach())
-            loss_ce = self.online_classifier_loss(logits_cls,y.squeeze())
+            loss_ce = self.online_classifier_loss(logits_cls.squeeze(),y.squeeze())
 
             self.log(f"{stage}_classifier_loss", loss_ce, sync_dist=True)
             self.online_losses.append(loss_ce.item())
             self.avg_online_losses.append(np.mean(self.online_losses))
 
             accuracy_metric = getattr(self, f"online_{stage}_accuracy")
-            accuracy_metric(self.online_logit_fn(logits_cls), y.squeeze())
+            accuracy_metric(self.online_logit_fn(logits_cls.squeeze()), y.squeeze())
             self.log(
                 f"online_{stage}_accuracy",
                 accuracy_metric,
@@ -272,7 +272,7 @@ class ViTMAE(pl.LightningModule):
             logits = self.classifier(cls.detach())
 
             accuracy_metric = getattr(self, f"online_{stage}_accuracy")
-            accuracy_metric(self.online_logit_fn(logits), y.squeeze())
+            accuracy_metric(self.online_logit_fn(logits.squeeze()), y.squeeze())
             self.log(
                 f"online_{stage}_accuracy",
                 accuracy_metric,
@@ -287,9 +287,9 @@ class ViTMAE(pl.LightningModule):
                     self.performance[self.current_epoch+1]=[]
 
             if len(y.squeeze().shape) > 1:
-                self.performance[self.current_epoch+1].append(sum(1*((self.online_logit_fn(logits)>0.5)==y.squeeze())).item())  
+                self.performance[self.current_epoch+1].append(sum(sum(1*((self.online_logit_fn(logits.squeeze())>0.5)==y.squeeze()))).item())  
             else: 
-                self.performance[self.current_epoch+1].append(sum(1*(torch.argmax(self.online_logit_fn(logits), dim=-1)==y.squeeze())).item())  
+                self.performance[self.current_epoch+1].append(sum(1*(torch.argmax(self.online_logit_fn(logits.squeeze()), dim=-1)==y.squeeze())).item())  
 
             return None
 
