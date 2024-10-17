@@ -27,6 +27,7 @@ data:
       _target_: numpy.load
       file: ${datasets.train.root}/bloodmnist_std_reshaped.npy
   classes: 8
+  task: 1
 
 datasets:
   train:

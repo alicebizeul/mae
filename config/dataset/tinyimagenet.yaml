@@ -27,6 +27,7 @@ data:
       _target_: numpy.load
       file: ${datasets.train.root}/std_reshaped.npy
   classes: 200
+  task: 1
 
 datasets:
   train:

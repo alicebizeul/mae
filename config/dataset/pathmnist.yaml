@@ -27,6 +27,7 @@ data:
       _target_: numpy.load
       file: ${datasets.train.root}/pathmnist_std_reshaped.npy
   classes: 9
+  task: 1
 
 datasets:
   train:

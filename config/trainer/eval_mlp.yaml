@@ -18,8 +18,10 @@ pl_module_eval:
   optimizer_name: sgd
   warmup: 10
   learning_rate: ${compute_lr:${pl_module_eval.base_learning_rate},${datamodule_eval.batch_size}}
+  eval_type: ${data.eval_type}
+  eval_fn: ${data.eval_fn}
   evaluated_epoch: ${evaluated_epoch}
-
+  
 # overriding so that we get where we were if only just evaluating a run
 logs_dir: ${base_logs_dir}/${checkpoint.run_path}
 local_dir: ${base_outputs_dir}/${checkpoint.run_path}

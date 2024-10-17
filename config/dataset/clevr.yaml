@@ -26,7 +26,8 @@ data:
     data: 
       _target_: numpy.load
       file: 
-  classes: 24
+  classes: 1
+  task: 24
 
 datasets:
   train:

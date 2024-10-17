@@ -27,6 +27,7 @@ data:
       _target_: numpy.load
       file: ${datasets.train.root}/cifar-10-batches-py/std_reshaped.npy
   classes: 10
+  task: 1
 
 datasets:
   train:
