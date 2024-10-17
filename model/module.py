@@ -182,7 +182,7 @@ class ViTMAE(pl.LightningModule):
             head_mask = None # Masking sequence after self attention heads
             if self.masking.type == "pc":
                 pc_mask = pc_mask[0]
-                target  = (img.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask])
+                target  = ((img.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask]) @ self.masking_fn[:,pc_mask].T).reshape(img.shape)
 
                 if self.masking.strategy in ["sampling_pc","pc"]:
                     indexes = torch.arange(self.masking_fn.shape[1],device=self.device)
@@ -217,7 +217,7 @@ class ViTMAE(pl.LightningModule):
             mask = self.model.unpatchify(mask)
 
             if self.masking.type == "pc":
-                outputs.logits = reconstruction.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask]
+                outputs.logits = ((reconstruction.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask]) @ self.masking_fn[:,pc_mask].T).reshape(reconstruction.shape)
                 outputs.mask = torch.ones_like(mask.reshape([mask.shape[0],-1]),device=self.device)
 
             loss_mae = self.model.forward_loss(target,outputs.logits,outputs.mask,patchify=False if self.masking.type == "pc" else True)
