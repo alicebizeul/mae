@@ -60,13 +60,14 @@ datamodule_eval:
   classes: ${data.classes}
   channels: ${data.channels}
   resolution: ${data.resolution}
+  patch_size: ${data.patch_size}
 
 
 extradata:
   pcamodule:
     _target_ : numpy.load
-    file: ${base_data_home}/tiny-imagenet-200/train/pc_matrix_reduced.npy
+    file: ${base_data_home}/tiny-imagenet-200/train/pc_matrix.npy
 
   eigenratiomodule:
     _target_: numpy.load
-    file: ${base_data_home}/tiny-imagenet-200/train/eigenvalues_ratio_reduced.npy
+    file: ${base_data_home}/tiny-imagenet-200/train/eigenvalues_ratio.npy

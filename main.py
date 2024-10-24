@@ -73,8 +73,9 @@ def main(config: DictConfig) -> None:
     )
     
     # Creating model
-    vit_config = instantiate(config.module_config)
+    vit_config = instantiate(config.module_config,patch_size=datamodule.patch_sizes)
     vit = instantiate(config.module,vit_config)
+
     model_train = instantiate(
         config.pl_module, 
         model=vit,

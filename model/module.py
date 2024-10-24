@@ -55,11 +55,12 @@ class ViTMAE(pl.LightningModule):
         self.model = model
 
         if self.masking.type == "pc":
-            self.register_buffer("masking_fn",torch.Tensor(self.datamodule.extra_data.pcamodule.T))
+            self.register_buffer("masking_fn",self.datamodule.pca.T) # check this
             
             size = self.image_size
             if isinstance(size, int):
                 size = (size, size)
+                
             self.random_resized_crop = K_transformations.RandomResizedCrop(
                 size=tuple(size),
                 scale=(0.2,1.0),
@@ -182,43 +183,43 @@ class ViTMAE(pl.LightningModule):
             head_mask = None # Masking sequence after self attention heads
             if self.masking.type == "pc":
                 pc_mask = pc_mask[0]
-                target  = ((img.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask]) @ self.masking_fn[:,pc_mask].T).reshape(img.shape)
+                target  = [img.reshape([img.shape[0],-1]) @ self.masking_fn[:,self.datamodule.train_dataset.index_patches[i]:self.datamodule.train_dataset.index_patches[i+1]] for i in pc_mask]
 
                 if self.masking.strategy in ["sampling_pc","pc"]:
-                    indexes = torch.arange(self.masking_fn.shape[1],device=self.device)
+                    indexes = torch.arange(self.datamodule.train_dataset.patch_nb,device=self.device)
                     pc_mask_input = indexes[~torch.isin(indexes,pc_mask[pc_mask!=-1])]
-                img     = (img.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask_input] @ self.masking_fn[:,pc_mask_input].T).reshape(img.shape)
+                img     = [img.reshape([img.shape[0],-1]) @ self.masking_fn[:,self.datamodule.train_dataset.index_patches[i]:self.datamodule.train_dataset.index_patches[i+1]] for i in pc_mask_input]
 
 
-                if not isinstance(self.datamodule.train_dataset.dataset, CLEVRCustomDataset):
-                    img = self.random_resized_crop(img)
-                    target = self.random_resized_crop(
-                        target, params=self.random_resized_crop._params
-                    )
+                # if not isinstance(self.datamodule.train_dataset.dataset, CLEVRCustomDataset):
+                #     img = self.random_resized_crop(img)
+                #     target = self.random_resized_crop(
+                #         target, params=self.random_resized_crop._params
+                #     )
 
-            elif self.masking.type == "pixel":
-                if self.masking.strategy == "sampling":
-                    self.model.config.mask_ratio = pc_mask[0]
-                    self.model.vit.embeddings.config.mask_ratio=pc_mask[0]
-                target = img
-            elif self.masking.type == "segmentation":
-                original_masking_fn = self.model.vit.embeddings.random_masking
-                self.model.vit.embeddings.random_masking, head_mask = (
-                    self.get_current_masking_function(pc_mask)
-                )
-                target = img
+            # elif self.masking.type == "pixel":
+            #     if self.masking.strategy == "sampling":
+            #         self.model.config.mask_ratio = pc_mask[0]
+            #         self.model.vit.embeddings.config.mask_ratio=pc_mask[0]
+            #     target = img
+            # elif self.masking.type == "segmentation":
+            #     original_masking_fn = self.model.vit.embeddings.random_masking
+            #     self.model.vit.embeddings.random_masking, head_mask = (
+            #         self.get_current_masking_function(pc_mask)
+            #     )
+            #     target = img
 
             outputs, cls = self.model(img,return_rep=False, head_mask=head_mask)
-            if self.masking.type == "segmentation":
-                self.model.vit.embeddings.random_masking = original_masking_fn
+            # if self.masking.type == "segmentation":
+            #     self.model.vit.embeddings.random_masking = original_masking_fn
 
             reconstruction = self.model.unpatchify(outputs.logits)
             mask = outputs.mask.unsqueeze(-1).repeat(1, 1, self.model.config.patch_size**2 *3)  # (N, H*W, p*p*3)
             mask = self.model.unpatchify(mask)
 
-            if self.masking.type == "pc":
-                outputs.logits = ((reconstruction.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask]) @ self.masking_fn[:,pc_mask].T).reshape(reconstruction.shape)
-                outputs.mask = torch.ones_like(mask.reshape([mask.shape[0],-1]),device=self.device)
+            # if self.masking.type == "pc":
+            #     outputs.logits = ((reconstruction.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask]) @ self.masking_fn[:,pc_mask].T).reshape(reconstruction.shape)
+            #     outputs.mask = torch.ones_like(mask.reshape([mask.shape[0],-1]),device=self.device)
 
             loss_mae = self.model.forward_loss(target,outputs.logits,outputs.mask,patchify=False if self.masking.type == "pc" else True)
 

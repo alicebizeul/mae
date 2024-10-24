@@ -57,9 +57,8 @@ datamodule:
   num_workers: 8
   classes: ${data.classes}
   channels: ${data.channels}
-  resolution: 
-    - ${data.height}
-    - ${data.width}
+  patch_size: ${data.patch_size}
+  resolution: ${data.resolution}
 
 datamodule_eval:
   _target_: dataset.dataloader.DataModule
@@ -72,9 +71,9 @@ datamodule_eval:
 extradata:
   pcamodule:
     _target_ : numpy.load
-    file: ${base_data_home}/cifar-10-batches-py/pc_matrix_reduced.npy
+    file: ${base_data_home}/cifar-10-batches-py/pc_matrix.npy
 
   eigenratiomodule:
     _target_: numpy.load
-    file: ${base_data_home}/cifar-10-batches-py/eigenvalues_ratio_reduced.npy
+    file: ${base_data_home}/cifar-10-batches-py/eigenvalues_ratio.npy
 

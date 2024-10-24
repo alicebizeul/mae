@@ -69,6 +69,7 @@ datamodule_eval:
   classes: ${data.classes}
   channels: ${data.channels}
   resolution: ${data.resolution}
+  patch_size: ${data.patch_size}
 
 
 extradata:
