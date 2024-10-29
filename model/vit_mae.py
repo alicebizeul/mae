@@ -130,6 +130,8 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
         """
         if patchify:
             target = self.patchify(pixel_values, interpolate_pos_encoding=interpolate_pos_encoding)
+        else: 
+            target = pixel_values
         if self.config.norm_pix_loss:
             mean = target.mean(dim=-1, keepdim=True)
             var = target.var(dim=-1, keepdim=True)

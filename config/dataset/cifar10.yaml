@@ -72,9 +72,9 @@ datamodule_eval:
 extradata:
   pcamodule:
     _target_ : numpy.load
-    file: ${base_data_home}/cifar-10-batches-py/pc_matrix_reduced.npy
+    file: ${base_data_home}/cifar-10-batches-py/pc_matrix.npy
 
   eigenratiomodule:
     _target_: numpy.load
-    file: ${base_data_home}/cifar-10-batches-py/eigenvalues_ratio_reduced.npy
+    file: ${base_data_home}/cifar-10-batches-py/eigenvalues_ratio.npy
 
