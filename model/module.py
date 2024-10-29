@@ -175,8 +175,8 @@ class ViTMAE(pl.LightningModule):
             img, y, pc_mask = batch
 
             # CLEVR
-            if y.shape[1] > 1:
-                y = y[:,:1]
+            # if y.shape[1] > 1:
+            #     y = y[:,:1]
 
             # mae training
             head_mask = None # Masking sequence after self attention heads
@@ -190,11 +190,11 @@ class ViTMAE(pl.LightningModule):
                 img     = (img.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask_input] @ self.masking_fn[:,pc_mask_input].T).reshape(img.shape)
 
 
-                if not isinstance(self.datamodule.train_dataset.dataset, CLEVRCustomDataset):
-                    img = self.random_resized_crop(img)
-                    target = self.random_resized_crop(
-                        target, params=self.random_resized_crop._params
-                    )
+                # if not isinstance(self.datamodule.train_dataset.dataset, CLEVRCustomDataset):
+                #     img = self.random_resized_crop(img)
+                #     target = self.random_resized_crop(
+                #         target, params=self.random_resized_crop._params
+                #     )
 
             elif self.masking.type == "pixel":
                 if self.masking.strategy == "sampling":
@@ -218,7 +218,7 @@ class ViTMAE(pl.LightningModule):
 
             if self.masking.type == "pc":
                 outputs.logits = ((reconstruction.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask]) @ self.masking_fn[:,pc_mask].T).reshape(reconstruction.shape)
-                outputs.mask = torch.ones_like(mask.reshape([mask.shape[0],-1]),device=self.device)
+                outputs.mask = torch.zeros_like(mask.reshape([mask.shape[0],-1]),device=self.device)
 
             loss_mae = self.model.forward_loss(target,outputs.logits,outputs.mask,patchify=False if self.masking.type == "pc" else True)
 
@@ -273,9 +273,9 @@ class ViTMAE(pl.LightningModule):
 
         else:
             img, y = batch
-            # CLEVR
-            if y.shape[1] > 1:
-                y = y[:,:1]
+            # # CLEVR
+            # if y.shape[1] > 1:
+            #     y = y[:,:1]
             cls, _ = self.model(img,return_rep=True)
             logits = self.classifier(cls.detach())
 
