@@ -20,7 +20,7 @@ import medmnist
 from medmnist import DermaMNIST, PathMNIST, BloodMNIST
 random.seed(42)
 
-nb_aug=100
+# nb_aug=100
 resolution=224
 name="imagenet"
 # data_fn = torchvision.datasets.CIFAR10
@@ -38,12 +38,12 @@ transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
 ])
-transform_aug = transforms.Compose([
-    torchvision.transforms.RandomResizedCrop(resolution,scale=[0.2,1.0],interpolation= 3),
-    torchvision.transforms.RandomHorizontalFlip(),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225]) #for imagenet
-])
+# transform_aug = transforms.Compose([
+#     torchvision.transforms.RandomResizedCrop(resolution,scale=[0.2,1.0],interpolation= 3),
+#     torchvision.transforms.RandomHorizontalFlip(),
+#     transforms.ToTensor(),
+#     transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225]) #for imagenet
+# ])
 
 # Download and load training dataset
 # trainset = data_fn(root='/cluster/project/sachan/callen/data_alice', train=True, download=True, transform=transform)
@@ -54,11 +54,10 @@ trainset = data_fn(root=folder, transform=transform)
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=len(trainset), shuffle=False)
 
 data_iter = iter(trainloader)
-images, labels = next(data_iter)
+images_np, labels_np = next(data_iter)
 
-images_np = images.numpy()
-labels_np = labels.numpy()
-print("This is the batch size",int((3*resolution*resolution)/4),flush=True)
+images_np = images_np.numpy()
+labels_np = labels_np.numpy()
 
 # Fetch the entire dataset in one go
 pca = IncrementalPCA(n_components=12288,batch_size=6144,copy=False)  # You can adjust the number of components
@@ -66,14 +65,14 @@ pca = IncrementalPCA(n_components=12288,batch_size=6144,copy=False)  # You can a
 # Reshape the images to (num_samples, height * width * channels)
 num_samples = images_np.shape[0]
 original_shape = images_np.shape
-images_flat = images_np.reshape(num_samples, -1)
+images_np = images_np.reshape(num_samples, -1)
 
 # Standardize
 # mean, std   = np.mean(images_flat, axis=0), np.std(images_flat, axis=0)
 # images_flat = (images_flat - mean) / std
 
 # Step 4: Perform PCA
-pca.fit(images_flat)
+pca.fit(images_np)
 
 # # trainset = data_fn(root='/cluster/project/sachan/callen/data_alice', train=True, download=True, transform=transform_aug)
 # trainset = data_fn(root=folder, transform=transform_aug)
@@ -103,6 +102,6 @@ pca.fit(images_flat)
 # np.save(f'{folder}/{name}_eigenvalues_augmented.npy',pca.explained_variance_)
 # np.save(f'{folder}/{name}_eigenvalues_ratio_augmented.npy',pca.explained_variance_ratio_)
 
-np.save(f'{folder}/pc_matrix_augmented.npy',pca.components_)
-np.save(f'{folder}/eigenvalues_augmented.npy',pca.explained_variance_)
-np.save(f'{folder}/eigenvalues_ratio_augmented.npy',pca.explained_variance_ratio_)
+np.save(f'{folder}/pc_matrix_ipca.npy',pca.components_)
+np.save(f'{folder}/eigenvalues_ipca.npy',pca.explained_variance_)
+np.save(f'{folder}/eigenvalues_ratio_ipca.npy',pca.explained_variance_ratio_)
