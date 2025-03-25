@@ -26,7 +26,7 @@ pl_module:
 module_config: 
   _target_: transformers.ViTMAEConfig
   hidden_size: 768
-  num_attention_head: 12
+  num_attention_heads: 12
   intermediate_size: 1536
   norm_pix_loss: False
   attn_implementation: "eager"

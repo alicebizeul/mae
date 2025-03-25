@@ -2,10 +2,10 @@ import os
 import shutil
 
 # Path to the folder where all the images are unzipped
-source_folder = '/cluster/project/sachan/callen/data_alice/ILSVRC2012_img/val'
+source_folder = '/cluster/scratch/abizeul/imagenet/val/ILSVRC2012'
 
 # Destination folder where you want to organize the images by class
-destination_folder = '/cluster/project/sachan/callen/data_alice/ILSVRC2012_img/val_fixed'
+destination_folder = '/cluster/scratch/abizeul/imagenet/val_fixed'
 
 # Create the destination folder if it doesn't exist
 if not os.path.exists(destination_folder):

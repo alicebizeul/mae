@@ -2,13 +2,13 @@ import os
 import shutil
 
 # Path to your text file
-txt_file_path = "/cluster/project/sachan/callen/data_alice/tiny-imagenet-200/val/val_annotations.txt"
+txt_file_path = "/cluster/scratch/abizeul/tiny_imagenet/tiny-imagenet-200/val/val_annotations.txt"
 
 # Directory containing the images
-image_directory = "/cluster/project/sachan/callen/data_alice/tiny-imagenet-200/val/images"
+image_directory = "/cluster/scratch/abizeul/tiny_imagenet/tiny-imagenet-200/val/images"
 
 # Directory where the images will be organized
-output_directory = "/cluster/project/sachan/callen/data_alice/tiny-imagenet-200/val_new"
+output_directory = "/cluster/scratch/abizeul/tiny_imagenet/tiny-imagenet-200/val_new"
 
 # Create the output directory if it doesn't exist
 if not os.path.exists(output_directory):
@@ -33,8 +33,8 @@ with open(txt_file_path, 'r') as file:
         source_file = os.path.join(image_directory, image_filename)
         
         # Destination file path (new location in the class directory)
-        destination_file = os.path.join(class_directory, "images", image_filename)
-        
+        destination_file = os.path.join(class_directory,image_filename)
+        print(source_file,destination_file)
         # Move the file
         if os.path.exists(source_file):
             shutil.move(source_file, destination_file)

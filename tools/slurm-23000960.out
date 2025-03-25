@@ -1,0 +1,5 @@
+['/cluster/home/abizeul/og_0_0.png']
+loade
+Starting
+Killed
+slurmstepd: error: Detected 1 oom_kill event in StepId=23000960.batch. Some of the step tasks have been OOM Killed.

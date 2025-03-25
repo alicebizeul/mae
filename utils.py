@@ -131,7 +131,8 @@ def find_existing_checkpoint(dirpath: str) -> Optional[str]:
 
 def load_checkpoints(model, config):
     if config.f is not None: 
-        print("------------------ Trying to load checkpoint from",config.f)
+        print("------------------ Trying to load checkpoint from",config.f) 
+        # model.load_state_dict(instantiate(config)["state_dict"],strict=False)
         try:
             model.load_state_dict(instantiate(config)["state_dict"],strict=False)
             attempt=1

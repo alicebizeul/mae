@@ -1,0 +1,144 @@
+Timer unit: 1e-09 s
+
+Total time: 136.66 s
+File: /cluster/home/abizeul/mae/model/module.py
+Function: shared_step at line 175
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   175                                               @profile
+   176                                               def shared_step(self, batch: Tensor, stage: str = "train", batch_idx: int = None):
+   177       163     155244.0    952.4      0.0          if stage == "train":
+   178       163     116662.0    715.7      0.0              img, y, pc_mask = batch
+   179                                           
+   180                                                       # mae training
+   181       163      33191.0    203.6      0.0              head_mask = None # Masking sequence after self attention heads
+   182       163   11920769.0  73133.6      0.0              if self.masking.type == "pc":
+   183       163    2039552.0  12512.6      0.0                  pc_mask = pc_mask[0]
+   184                                                           # pc_mask = torch.masked_select(pc_mask,pc_mask != -1)
+   185    526967  132067940.0    250.6      0.1                  for stop_index in range(pc_mask.shape[0]):
+   186    526881        1e+11 203846.8     78.6                      if pc_mask[stop_index]==-1:
+   187        77     989112.0  12845.6      0.0                          pc_mask = pc_mask[:stop_index]
+   188        77      47201.0    613.0      0.0                          break
+   189                                                           # pc_mask = pc_mask[pc_mask!=-1]
+   190       163   87367588.0 535997.5      0.1                  target  = (img.reshape([img.shape[0],-1]) @ self.masking_fn_[:,pc_mask])
+   191                                           
+   192       163   14142437.0  86763.4      0.0                  if self.masking.strategy in ["sampling_pc","sampling_rest_pc","pc"]:
+   193       163   11493970.0  70515.2      0.0                      indexes = torch.arange(self.masking_fn_.shape[1],device=self.device)
+   194                                                               # print(pc_mask,pc_mask.shape)
+   195       163 4514343658.0    3e+07      3.3                      pc_mask_input = indexes[~torch.isin(indexes,pc_mask[pc_mask!=-1])]
+   196                                                               # print(pc_mask_input,pc_mask_input.shape)
+   197                                                               # Convert pc_mask to a set for fast lookup
+   198                                                               # sorted_mask = torch.sort(pc_mask).values
+   199                                           
+   200                                                               # # Use torch.searchsorted to identify the elements not in pc_mask
+   201                                                               # mask_present = torch.searchsorted(sorted_mask, indexes)
+   202                                                               # pc_mask_input = indexes[mask_present >= len(sorted_mask)]
+   203       163  121706047.0 746662.9      0.1                  img     = (img.reshape([img.shape[0],-1]) @ self.masking_fn_[:,pc_mask_input] @ self.masking_fn_[:,pc_mask_input].T).reshape(img.shape)
+   204                                           
+   205                                                       elif self.masking.type == "pixel":
+   206                                                           if self.masking.strategy == "sampling":
+   207                                                               self.model.config.mask_ratio = pc_mask[0]
+   208                                                               self.model.vit.embeddings.config.mask_ratio=pc_mask[0]
+   209                                                           target = img
+   210                                                       elif self.masking.type == "segmentation":
+   211                                                           original_masking_fn = self.model.vit.embeddings.random_masking
+   212                                                           self.model.vit.embeddings.random_masking, head_mask = (
+   213                                                               self.get_current_masking_function(pc_mask)
+   214                                                           )
+   215                                                           target = img
+   216                                           
+   217       163 2742953307.0    2e+07      2.0              outputs, cls = self.model(img,return_rep=False, head_mask=head_mask)
+   218       163   10563657.0  64807.7      0.0              if self.masking.type == "segmentation":
+   219                                                           self.model.vit.embeddings.random_masking = original_masking_fn
+   220                                           
+   221       163   17219571.0 105641.5      0.0              reconstruction = self.model.unpatchify(outputs.logits)
+   222       163    6001366.0  36818.2      0.0              mask = outputs.mask.unsqueeze(-1).repeat(1, 1, self.model.config.patch_size**2 *3)  # (N, H*W, p*p*3)
+   223       163    8414299.0  51621.5      0.0              mask = self.model.unpatchify(mask)
+   224                                           
+   225       163    6988202.0  42872.4      0.0              if self.masking.type == "pc":
+   226       163   13943810.0  85544.8      0.0                  outputs.logits = reconstruction.reshape([img.shape[0],-1]) @ self.masking_fn_[:,pc_mask]
+   227       163    6837869.0  41950.1      0.0                  outputs.mask = torch.zeros_like(mask.reshape([mask.shape[0],-1]),device=self.device)
+   228                                           
+   229       163        2e+10    1e+08     13.2              loss_mae = self.model.forward_loss(target,outputs.logits,outputs.mask,patchify=False if self.masking.type == "pc" else True)
+   230                                           
+   231       326  453747652.0    1e+06      0.3              self.log(
+   232       163     176052.0   1080.1      0.0                  f"{stage}_mae_loss", 
+   233       163      28804.0    176.7      0.0                  loss_mae, 
+   234       163      26780.0    164.3      0.0                  prog_bar=True,
+   235       163      26682.0    163.7      0.0                  sync_dist=True,
+   236       163      28671.0    175.9      0.0                  on_step=False,
+   237       163      19275.0    118.3      0.0                  on_epoch=True
+   238                                                           )
+   239                                           
+   240                                           
+   241       163    1417761.0   8697.9      0.0              if (self.current_epoch+1)%self.eval_freq==0 and batch_idx==0:
+   242                                                           self.train_losses.append(loss_mae.item())
+   243                                                           self.avg_train_losses.append(np.mean(self.train_losses))
+   244                                                           plot_loss(self.avg_train_losses,name_loss="MSE",save_dir=self.save_dir,name_file="_train")
+   245                                                           plot_loss(self.avg_online_losses,name_loss="X-Ent",save_dir=self.save_dir,name_file="_train_online_cls")
+   246                                           
+   247                                                           if (
+   248                                                               self.model.config.mask_ratio is None
+   249                                                               or self.model.config.mask_ratio > 0
+   250                                                           ):
+   251                                                               save_reconstructed_images((-1*(mask[:10]-1))*img[:10],mask[:10]*img[:10], reconstruction[:10], self.current_epoch+1, self.save_dir,"train")
+   252                                                           else:
+   253                                                               save_reconstructed_images(img[:10], target[:10], reconstruction[:10], self.current_epoch+1, self.save_dir,"train")
+   254                                           
+   255       163     518175.0   3179.0      0.0              del mask, reconstruction
+   256                                           
+   257                                                       # online classifier
+   258       163   15925599.0  97703.1      0.0              logits_cls = self.classifier(cls.detach())
+   259       163   17727143.0 108755.5      0.0              loss_ce = self.online_classifier_loss(logits_cls.squeeze(),y.squeeze())
+   260                                           
+   261       163 2707162938.0    2e+07      2.0              self.log(f"{stage}_classifier_loss", loss_ce, sync_dist=True)
+   262                                           
+   263       163    1296519.0   7954.1      0.0              accuracy_metric = getattr(self, f"online_{stage}_accuracy")
+   264       163  172128552.0    1e+06      0.1              accuracy_metric(self.online_logit_fn(logits_cls.squeeze()), y.squeeze())
+   265       324  162333944.0 501030.7      0.1              self.log(
+   266       162     122857.0    758.4      0.0                  f"online_{stage}_accuracy",
+   267       162      26313.0    162.4      0.0                  accuracy_metric,
+   268       162      23827.0    147.1      0.0                  prog_bar=False,
+   269       162      21531.0    132.9      0.0                  sync_dist=True,
+   270                                                       )
+   271       162     369191.0   2279.0      0.0              del logits_cls 
+   272                                           
+   273       162     985273.0   6081.9      0.0              if (self.current_epoch+1)%self.eval_freq==0 and batch_idx==0:
+   274                                                           self.online_losses.append(loss_ce.item())
+   275                                                           self.avg_online_losses.append(np.mean(self.online_losses))
+   276                                           
+   277                                                           plot_loss(self.avg_online_losses,name_loss="X-Ent",save_dir=self.save_dir,name_file="_train_online_cls")
+   278                                           
+   279       162    3593943.0  22184.8      0.0              return loss_mae + loss_ce
+   280                                           
+   281                                                   else:
+   282                                                       img, y = batch
+   283                                                       # CLEVR
+   284                                                       # if y.shape[1] > 1:
+   285                                                       #     y = y[:,:1]
+   286                                                       cls, _ = self.model(img,return_rep=True)
+   287                                                       logits = self.classifier(cls.detach())
+   288                                           
+   289                                                       accuracy_metric = getattr(self, f"online_{stage}_accuracy")
+   290                                                       accuracy_metric(self.online_logit_fn(logits.squeeze()), y.squeeze())
+   291                                                       self.log(
+   292                                                           f"online_{stage}_accuracy",
+   293                                                           accuracy_metric,
+   294                                                           prog_bar=True,
+   295                                                           sync_dist=True,
+   296                                                           on_epoch=True,
+   297                                                           on_step=False,
+   298                                                       )
+   299                                           
+   300                                                       if batch_idx == 0:
+   301                                                           if self.current_epoch+1 not in list(self.performance.keys()): 
+   302                                                               self.performance[self.current_epoch+1]=[]
+   303                                                       if len(y.squeeze().shape) > 1:
+   304                                                           self.performance[self.current_epoch+1].append(sum(sum(1*((self.online_logit_fn(logits.squeeze())>0.5)==y.squeeze()))).item())  
+   305                                                       else: 
+   306                                                           self.performance[self.current_epoch+1].append(sum(1*(torch.argmax(self.online_logit_fn(logits.squeeze()), dim=-1)==y.squeeze())).item())  
+   307                                           
+   308                                                       return None
+
+136.66 seconds - /cluster/home/abizeul/mae/model/module.py:175 - shared_step

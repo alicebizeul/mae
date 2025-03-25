@@ -28,7 +28,7 @@ from model.module_lin import ViTMAE_lin
 from model.module_knn import ViTMAE_knn
 from model.vit_mae import ViTMAEForPreTraining
 from dataset.dataloader import DataModule
-from dataset.CLEVRCustomDataset import CLEVRCustomDataset
+# from dataset.CLEVRCustomDataset import CLEVRCustomDataset
 import transformers
 from transformers import ViTMAEConfig
 from utils import (
@@ -38,13 +38,14 @@ from utils import (
     load_checkpoints,
     Normalize
 )
-
+import line_profiler
 # Configure logging
 log = logging.getLogger(__name__)
 git_hash = get_git_hash()
 def create_lambda_transform(mean, std):
     return torchvision.transforms.Lambda(lambda sample: (sample - mean) / std)
 OmegaConf.register_new_resolver('divide', lambda a, b: int(int(a)/b))
+OmegaConf.register_new_resolver('multiply', lambda a, b: int(int(a)*b))
 OmegaConf.register_new_resolver("compute_lr", lambda base_lr, batch_size: base_lr * (batch_size / 256))
 OmegaConf.register_new_resolver("decimal_2_percent", lambda decimal: int(100*decimal) if decimal is not None else decimal)
 OmegaConf.register_new_resolver("convert_str", lambda number: "_"+str(number))
@@ -89,7 +90,7 @@ def main(config: DictConfig) -> None:
         filename='{epoch:02d}-{train_loss:.2f}',  # Filename format
         save_top_k=-1,  # Save all checkpoints
         save_weights_only=False,  # Save the full model (True for weights only)
-        every_n_epochs=100  # Save every epoch
+        every_n_epochs=50  # Save every epoch
     )
 
     # Runing training (with eval on masked data to track behavior/convergence)
@@ -100,7 +101,7 @@ def main(config: DictConfig) -> None:
             enable_checkpointing = True,
             num_sanity_val_steps=0,
             callbacks=[checkpoint_callback],
-            check_val_every_n_epoch=config.pl_module.eval_freq
+            check_val_every_n_epoch=config.pl_module.eval_freq,
         )
     print("------------------------- Start Training")
     trainer.fit(model_train, datamodule=datamodule)
@@ -115,25 +116,25 @@ def main(config: DictConfig) -> None:
         data = config.datasets,
     )
     
-    del trainer, vit
-    for i in range(config.data.task):
-        model_eval = instantiate(
-            config=config.pl_module_eval,
-            model=model_train.model,
-            datamodule=datamodule,
-            save_dir=config.local_dir,
-            task=i
-        )
-        evaluator = pl.Trainer(
-                **eval_configs,
-                logger=wandb_logger,
-                enable_checkpointing = False,
-                num_sanity_val_steps=0,
-                check_val_every_n_epoch=1
-            )
-        print(f"------------------------- Start Evaluation: lin probe for task {i}")
-        evaluator.fit(model_eval, datamodule=datamodule)
-        print(f"------------------------- End Evaluation: lin probe for task {i}")
+    # del trainer, vit
+    # for i in range(config.data.task):
+    #     model_eval = instantiate(
+    #         config=config.pl_module_eval,
+    #         model=model_train.model,
+    #         datamodule=datamodule,
+    #         save_dir=config.local_dir,
+    #         task=i
+    #     )
+    #     evaluator = pl.Trainer(
+    #             **eval_configs,
+    #             logger=wandb_logger,
+    #             enable_checkpointing = False,
+    #             num_sanity_val_steps=0,
+    #             check_val_every_n_epoch=1
+    #         )
+    #     print(f"------------------------- Start Evaluation: lin probe for task {i}")
+    #     evaluator.fit(model_eval, datamodule=datamodule)
+    #     print(f"------------------------- End Evaluation: lin probe for task {i}")
 
 
 if __name__ == "__main__":

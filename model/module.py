@@ -17,9 +17,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from utils import save_reconstructed_images, save_attention_maps, save_attention_maps_batch
 from plotting import plot_loss, plot_performance
-import kornia.augmentation as K_transformations
-from kornia.constants import Resample
-from dataset.CLEVRCustomDataset import CLEVRCustomDataset
+# import kornia.augmentation as K_transformations
+# from kornia.constants import Resample
+# from dataset.CLEVRCustomDataset import CLEVRCustomDataset
+# from line_profiler import profile
 
 class ViTMAE(pl.LightningModule):
 
@@ -47,7 +48,7 @@ class ViTMAE(pl.LightningModule):
         self.datamodule = datamodule
         self.num_classes = datamodule.num_classes
         self.image_size = datamodule.image_size
-        self.classifier_lr = learning_rate
+        self.classifierlr = learning_rate
         self.warm_up = warmup
         self.eval_freq = eval_freq
         self.masking = datamodule.masking
@@ -55,17 +56,10 @@ class ViTMAE(pl.LightningModule):
         self.model = model
 
         if self.masking.type == "pc":
-            self.register_buffer("masking_fn",torch.Tensor(self.datamodule.extra_data.pcamodule.T))
-            
-            size = self.image_size
-            if isinstance(size, int):
-                size = (size, size)
-            self.random_resized_crop = K_transformations.RandomResizedCrop(
-                size=tuple(size),
-                scale=(0.2,1.0),
-                resample=Resample.BICUBIC.name
-            )
-        
+            self.register_buffer("masking_fn_",torch.Tensor(self.datamodule.extra_data.pcamodule.T))
+            self.indexes = torch.arange(self.masking_fn_.shape[1])
+
+
         elif self.masking.type == "random":
             self.register_buffer("masking_fn",nn.Linear())
         elif self.masking.type == "segmentation":
@@ -94,147 +88,51 @@ class ViTMAE(pl.LightningModule):
     def forward(self, x):
         return self.model(self.transformation(x))
 
-    def get_current_masking_function(self, seg_mask):
-        if self.masking.strategy == 'complete':
-            seg_mask = seg_mask.max(dim=1).values.float()
-            patched_seg_mask = self.mask_patch_pool(seg_mask[:, 0]).flatten(1)
-        else:
-            # Patch each individual segmentation mask
-            patched_seg_mask = (
-                self.mask_patch_pool(seg_mask[:, :, 0].float()).flatten(2)
-            )
-            batch_size, n_masks, n_patches = patched_seg_mask.shape
-            # Get maximum number of patches out of any segmentation mask
-            max_patches_per_element = patched_seg_mask.sum(dim=-1).max().int()
-            # Create random order overlapping with the segmentation mask
-            segmentation_noise = torch.rand_like(patched_seg_mask) * patched_seg_mask
-            sorted_order = torch.argsort(segmentation_noise, dim=-1, descending=True).to(seg_mask.device)
-            # Randomly select patches from the segmentation mask to mask out
-            num_patches_per_mask = torch.randint(
-                low=0,
-                high=max_patches_per_element,
-                size=(batch_size, n_masks, int(self.datamodule.masking.pixel_ratio*max_patches_per_element)),
-            ).to(seg_mask.device)
-            # Gather indices to and set them to zero
-            index_to_mask = torch.gather(sorted_order, dim=-1, index=num_patches_per_mask).long()
-            patched_seg_mask = patched_seg_mask.scatter(
-                dim=-1, index=index_to_mask, value=0
-            )
-            if self.masking.strategy == "partial":
-                # Select random index to keep for each object
-                idx_to_keep = sorted_order[:, :, 0, None]
-                patched_seg_mask = patched_seg_mask.scatter(
-                    dim=-1, index=idx_to_keep, value=1
-                )
-
-            # Collapse segmentation mask to get a single mask per sample
-            patched_seg_mask = patched_seg_mask.max(dim=1).values
-
-        # Invert mask because we keep patches with 0
-        patched_seg_mask = 1 - patched_seg_mask
-        
-        # Get indices such that, per batch, the first indices correspond
-        # to '0', i.e., keep, and the last indices to '1', i.e., mask within the patched_seg_mask
-        ids_sort = torch.argsort(patched_seg_mask, dim=1).to(
-            patched_seg_mask.device
-        ) 
-        # Keep as many patches as the maximum selected by any mask
-        len_keep = patched_seg_mask.sum(dim=1).max().int()
-        ids_keep = ids_sort[:, :len_keep] 
-
-        # Set correct masking ratio
-        ratio = patched_seg_mask.sum()/(patched_seg_mask.shape[0]*patched_seg_mask.shape[1])
-        self.model.config.mask_ratio = ratio
-        self.model.vit.embeddings.config.mask_ratio=ratio
-
-        def masking_fn(sequence, noise=None):
-            sequence_unmasked = torch.gather(
-                sequence,
-                dim=1,
-                index=ids_keep.unsqueeze(-1).repeat(1, 1, sequence.shape[-1]),
-            )
-            # Restore original mask from sorted mask/sequence
-            ids_restore = torch.argsort(ids_sort, dim=1).to(patched_seg_mask.device)
-            return sequence_unmasked, patched_seg_mask, ids_restore
-        # Get all patch indices that are kept but should not be masked
-        batch_idx, patch_idx = torch.where(
-            torch.gather(patched_seg_mask, dim=1, index=ids_keep) == 1
-        )
-        # Construct a head mask to mask out cross attention with invalid patches
-        head_mask = torch.ones(seg_mask.shape[0], len_keep+1, len_keep+1)
-        head_mask[batch_idx, patch_idx+1, :] = 0
-        head_mask[batch_idx, :, patch_idx+1] = 0
-        head_mask = head_mask[None].repeat(self.model.vit.config.num_hidden_layers, 1, 1, 1)
-        head_mask = head_mask[:, :, None]
-        head_mask = head_mask.to(seg_mask.device)
-
-        return masking_fn, head_mask
-
+    # @profile
+    # we want to shuffle, split, then split uniformly according to a predefined patchsize (we can reorder or not), maybe we can have very small patchsizes
     def shared_step(self, batch: Tensor, stage: str = "train", batch_idx: int = None):
         if stage == "train":
             img, y, pc_mask = batch
 
-            # # CLEVR
-            # if y.shape[1] > 1:
-            #     y = y[:,:1]
-
-            # mae training
-            head_mask = None # Masking sequence after self attention heads
             if self.masking.type == "pc":
-                pc_mask = pc_mask[0]
-                target  = (img.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask])
+                # target  = (img.reshape([img.shape[0],-1]) @ self.masking_fn_[:,pc_mask])
 
                 if self.masking.strategy in ["sampling_pc","pc"]:
-                    indexes = torch.arange(self.masking_fn.shape[1],device=self.device)
-                    pc_mask_input = indexes[~torch.isin(indexes,pc_mask[pc_mask!=-1])]
-                img     = (img.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask_input] @ self.masking_fn[:,pc_mask_input].T).reshape(img.shape)
+                    indexes = self.indexes.to(self.device)
+                    pc_mask_input = indexes[~torch.isin(indexes,pc_mask)]
 
+                img     = img.reshape([img.shape[0],-1]) @ self.masking_fn_ #@ self.masking_fn_[:,pc_mask_input].T).reshape(img.shape)
+                target  = img[:,pc_mask]
 
-                # if not isinstance(self.datamodule.train_dataset.dataset, CLEVRCustomDataset):
-                #     img = self.random_resized_crop(img)
-                #     target = self.random_resized_crop(
-                #         target, params=self.random_resized_crop._params
-                #     )
 
             elif self.masking.type == "pixel":
                 if self.masking.strategy == "sampling":
-                    self.model.config.mask_ratio = pc_mask[0]
-                    self.model.vit.embeddings.config.mask_ratio=pc_mask[0]
-                target = img
-            elif self.masking.type == "segmentation":
-                original_masking_fn = self.model.vit.embeddings.random_masking
-                self.model.vit.embeddings.random_masking, head_mask = (
-                    self.get_current_masking_function(pc_mask)
-                )
+                    self.model.config.mask_ratio = pc_mask
+                    self.model.vit.embeddings.config.mask_ratio=pc_mask
                 target = img
 
-            outputs, cls = self.model(img,return_rep=False, head_mask=head_mask)
-            if self.masking.type == "segmentation":
-                self.model.vit.embeddings.random_masking = original_masking_fn
-
+            outputs, cls = self.model(img,return_rep=False)
             reconstruction = self.model.unpatchify(outputs.logits)
-            mask = outputs.mask.unsqueeze(-1).repeat(1, 1, self.model.config.patch_size**2 *3)  # (N, H*W, p*p*3)
+            mask = outputs.mask.unsqueeze(-1).repeat(1, 1, self.model.config.patch_size**2 *3)  
             mask = self.model.unpatchify(mask)
 
             if self.masking.type == "pc":
-                outputs.logits = reconstruction.reshape([img.shape[0],-1]) @ self.masking_fn[:,pc_mask]
+                outputs.logits = reconstruction.reshape([img.shape[0],-1]) @ self.masking_fn_[:,pc_mask]
                 outputs.mask = torch.zeros_like(mask.reshape([mask.shape[0],-1]),device=self.device)
 
             loss_mae = self.model.forward_loss(target,outputs.logits,outputs.mask,patchify=False if self.masking.type == "pc" else True)
 
-            self.log(
-                f"{stage}_mae_loss", 
-                loss_mae, 
-                prog_bar=True,
-                sync_dist=True,
-                on_step=False,
-                on_epoch=True
-                )
-
-            self.train_losses.append(loss_mae.item())
-            self.avg_train_losses.append(np.mean(self.train_losses))
-
             if (self.current_epoch+1)%self.eval_freq==0 and batch_idx==0:
+                self.log(
+                    f"{stage}_mae_loss", 
+                    loss_mae, 
+                    prog_bar=True,
+                    sync_dist=False,
+                    on_step=True,
+                    on_epoch=False
+                    )
+                self.train_losses.append(loss_mae.item())
+                self.avg_train_losses.append(np.mean(self.train_losses))
                 plot_loss(self.avg_train_losses,name_loss="MSE",save_dir=self.save_dir,name_file="_train")
                 plot_loss(self.avg_online_losses,name_loss="X-Ent",save_dir=self.save_dir,name_file="_train_online_cls")
 
@@ -246,36 +144,32 @@ class ViTMAE(pl.LightningModule):
                 else:
                     save_reconstructed_images(img[:10], target[:10], reconstruction[:10], self.current_epoch+1, self.save_dir,"train")
 
-            del mask, reconstruction
-
             # online classifier
             logits_cls = self.classifier(cls.detach())
             loss_ce = self.online_classifier_loss(logits_cls.squeeze(),y.squeeze())
 
-            self.log(f"{stage}_classifier_loss", loss_ce, sync_dist=True)
-            self.online_losses.append(loss_ce.item())
-            self.avg_online_losses.append(np.mean(self.online_losses))
-
-            accuracy_metric = getattr(self, f"online_{stage}_accuracy")
-            accuracy_metric(self.online_logit_fn(logits_cls.squeeze()), y.squeeze())
-            self.log(
-                f"online_{stage}_accuracy",
-                accuracy_metric,
-                prog_bar=False,
-                sync_dist=True,
-            )
-            del logits_cls 
-
             if (self.current_epoch+1)%self.eval_freq==0 and batch_idx==0:
+                self.log(f"{stage}_classifier_loss", loss_ce, sync_dist=False, on_step=True, on_epoch=False)
+
+                accuracy_metric = getattr(self, f"online_{stage}_accuracy")
+                accuracy_metric(self.online_logit_fn(logits_cls.squeeze()), y.squeeze())
+                self.log(
+                    f"online_{stage}_accuracy",
+                    accuracy_metric,
+                    prog_bar=False,
+                    sync_dist=True,
+                )
+                del logits_cls 
+
+                self.online_losses.append(loss_ce.item())
+                self.avg_online_losses.append(np.mean(self.online_losses))
+
                 plot_loss(self.avg_online_losses,name_loss="X-Ent",save_dir=self.save_dir,name_file="_train_online_cls")
 
             return loss_mae + loss_ce
 
         else:
             img, y = batch
-            # CLEVR
-            # if y.shape[1] > 1:
-            #     y = y[:,:1]
             cls, _ = self.model(img,return_rep=True)
             logits = self.classifier(cls.detach())
 

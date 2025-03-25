@@ -57,6 +57,7 @@ datamodule:
   num_workers: 8
   classes: ${data.classes}
   channels: ${data.channels}
+  name: ${data.name}
   resolution: 
     - ${data.height}
     - ${data.width}
@@ -68,6 +69,7 @@ datamodule_eval:
   classes: ${data.classes}
   channels: ${data.channels}
   resolution: ${data.resolution}
+  name: ${data.name}
 
 extradata:
   pcamodule:

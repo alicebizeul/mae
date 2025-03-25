@@ -8,6 +8,11 @@ In your environment of choice, install the necessary requirements
 
     !pip install -r requirements.txt 
 
+Alternatively, install individual packages as follows:
+
+    !pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+    !pip install pandas numpy pillow scikit-learn scikit-image plotly kaleido matplotlib submitit hydra-core kornia pytorch-lightning imageio medmnist wandb transformers
+
 Create a config file that suits your machine:
 
     cd ./config/user

@@ -4,5 +4,5 @@ defaults:
   - override /dataset: bloodmnist
   - override /model: vit-t
   - override /masking: pc_tvb
-  - override /transformations: mae_adapted
+  - override /transformations: mae
 

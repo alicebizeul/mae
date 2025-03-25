@@ -52,6 +52,7 @@ datamodule:
   classes: ${data.classes}
   channels: ${data.channels}
   resolution: ${data.resolution}
+  name: ${data.name}
 
 datamodule_eval:
   _target_: dataset.dataloader.DataModule
@@ -60,6 +61,7 @@ datamodule_eval:
   classes: ${data.classes}
   channels: ${data.channels}
   resolution: ${data.resolution}
+  name: ${data.name}
 
 
 extradata:

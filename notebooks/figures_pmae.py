@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 #%% 
-
+# Loss Original
 results_mae = {
     "DermaMNIST":{
         8:{
@@ -13,6 +13,10 @@ results_mae = {
             30: 76.4,
             40: 73.6,
             50: 71.4,
+            60: 76.3,
+            70: 71.5,
+            80: 71.5,
+            90: 71.6
         },
     },
     "PathMNIST":{
@@ -22,6 +26,10 @@ results_mae = {
             30: 94.8,
             40: 95.0,
             50: 88.8,
+            60: 81.7,
+            70: 83.1,
+            80: 84.0,
+            90: 84.4,
         },
     },
     "BloodMNIST":{
@@ -31,6 +39,10 @@ results_mae = {
             30: 93.8,
             40: 88.2,
             50: 85.0,
+            60: 85.2,
+            70: 83.6,
+            80: 84.9,
+            90: 86.0,
         },
     },
     "TinyImageNet":{
@@ -40,6 +52,10 @@ results_mae = {
             30: 16.3,
             40: 17.4,
             50: 15.0,
+            60: 14.4,
+            70: 14.4,
+            80: 12.8,
+            90: 11.6,
         },
     },
     "CIFAR10":{
@@ -49,76 +65,128 @@ results_mae = {
             30: 59.5,
             40: 58.2,
             50: 57.3,
+            60: 53.1,
+            70: 52.7,
+            80: 53.6,
+            90: 50.0,
         },
     },
 }
 
+# # Loss A 
+# results_mae = {
+#     "DermaMNIST":{
+#         8:{
+#             10: 78.2,
+#             20: 78.6,
+#             30: 78.2,
+#             40: 77.0,
+#             50: 78.2,
+#         },
+#     },
+#     "PathMNIST":{
+#         8:{
+#             10: 96.5,
+#             20: 94.6,
+#             30: 94.0,
+#             40: 92.0,
+#             50: 90.2,
+#         },
+#     },
+#     "BloodMNIST":{
+#         8:{
+#             10: 93.7,
+#             20: 93.3,
+#             30: 95.3,
+#             40: 94.5,
+#             50: 92.4,
+#         },
+#     },
+#     "TinyImageNet":{
+#         8:{
+#             10: 13.5,
+#             20: 22.5,
+#             30: 21.1,
+#             40: 16.7,
+#             50: 22.2,
+#         },
+#     },
+#     "CIFAR10":{
+#         8:{
+#             10: 59.0,
+#             20: 57.0,
+#             30: 57.8,
+#             40: 55.7,
+#             50: 55.3,
+#         },
+#     },
+# }
 #%%
 
-# Initialize figure
-fig = go.Figure()
+# # Initialize figure
+# fig = go.Figure()
 
-# Create radar plot for each dataset in the results_mae
-for dataset, values in results_mae.items():
-    categories = []
-    values_storage = []
+# # Create radar plot for each dataset in the results_mae
+# for dataset, values in results_mae.items():
+#     categories = []
+#     values_storage = []
     
-    # Extract values for theta categories and corresponding values
-    for mask_size, mask_values in values.items():
-        for theta, val in mask_values.items():
-            categories.append(f"{mask_size},{theta}")
-            values_storage.append(val)
+#     # Extract values for theta categories and corresponding values
+#     for mask_size, mask_values in values.items():
+#         for theta, val in mask_values.items():
+#             categories.append(f"{mask_size},{theta}")
+#             values_storage.append(val)
 
-    values_storage = [x -max(values_storage) for x in values_storage]
+#     values_storage = [x -max(values_storage) for x in values_storage]
 
-    categories += [categories[0]]
-    values_storage += [values_storage[0]]
-    # Add curves for each dataset
-    if values:
-        fig.add_trace(go.Scatterpolar(
-            r=values_storage,
-            theta=categories[:len(values_storage)],
-            mode='markers+lines',
-            name=f'{dataset}',
-            line=dict(width=1.5)
-        ))
+#     categories += [categories[0]]
+#     values_storage += [values_storage[0]]
+#     # Add curves for each dataset
+#     if values:
+#         fig.add_trace(go.Scatterpolar(
+#             r=values_storage,
+#             theta=categories[:len(values_storage)],
+#             mode='markers+lines',
+#             name=f'{dataset}',
+#             line=dict(width=1.5)
+#         ))
 
 
-# Update layout for aesthetics
-fig.update_layout(
-    polar=dict(
-        radialaxis=dict(
-            visible=True,
-        ),
-    ),
-    showlegend=True,
-    # legend=dict(entrywidth=0.2, # change it to 0.3
-    #                           entrywidthmode='fraction',
-    #                           orientation='h',
-    #                           y=1.2,
-    #                           xanchor="center",
-    #                           x=0.65)
-    legend=dict(
-        entrywidth=0.4,  # Adjusting the width of legend entries
-        entrywidthmode='fraction',  # Ensure width is a fraction of total width
-        orientation='h',  # Horizontal legend
-        y=1.2,  # Move legend above the plot
-        xanchor="right",  # Align the legend to the center horizontally
-        x=0.95,  # Shift the legend slightly to the right
-        font=dict(  # Set the font properties for the legend
-            size=14,  # Change the font size
-            color="black"  # Change the font color (optional)
-        ),
-    ),
-    plot_bgcolor='rgba(0, 0, 0, 0)',  # Transparent plot background
-    paper_bgcolor='rgba(0, 0, 0, 0)',  # Transparent outer background
-    margin=dict(l=0, r=0, t=0, b=0)  # Tight cropping around the figure
-)
+# # Update layout for aesthetics
+# fig.update_layout(
+#     polar=dict(
+#         radialaxis=dict(
+#             visible=True,
+#         ),
+#     ),
+#     showlegend=True,
+#     # legend=dict(entrywidth=0.2, # change it to 0.3
+#     #                           entrywidthmode='fraction',
+#     #                           orientation='h',
+#     #                           y=1.2,
+#     #                           xanchor="center",
+#     #                           x=0.65)
+#     legend=dict(
+#         entrywidth=0.4,  # Adjusting the width of legend entries
+#         entrywidthmode='fraction',  # Ensure width is a fraction of total width
+#         orientation='h',  # Horizontal legend
+#         y=1.2,  # Move legend above the plot
+#         xanchor="right",  # Align the legend to the center horizontally
+#         x=0.95,  # Shift the legend slightly to the right
+#         font=dict(  # Set the font properties for the legend
+#             size=14,  # Change the font size
+#             color="black"  # Change the font color (optional)
+#         ),
+#     ),
+#     plot_bgcolor='rgba(0, 0, 0, 0)',  # Transparent plot background
+#     paper_bgcolor='rgba(0, 0, 0, 0)',  # Transparent outer background
+#     margin=dict(l=0, r=0, t=0, b=0)  # Tight cropping around the figure
+# )
 
-# Save the figure with a transparent background and tight cropping
-fig.write_image("./figures/radar_chart.pdf", scale=1, width=400, height=400)
-# Show the plot
-fig.show()
+# # Save the figure with a transparent background and tight cropping
+# fig.write_image("./figures/radar_chart.pdf", scale=1, width=400, height=400)
+# # Show the plot
+# fig.show()
 # %%
 # Updated dataset order
 dataset_order = ["CIFAR10", "TinyImageNet", "DermaMNIST", "BloodMNIST", "PathMNIST"]

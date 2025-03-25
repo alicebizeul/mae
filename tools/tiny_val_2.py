@@ -2,7 +2,7 @@ import os
 import shutil
 
 # Path to the root directory
-root_directory = "/cluster/project/sachan/callen/data_alice/tiny-imagenet-200/val"
+root_directory = "/cluster/scratch/abizeul/tiny_imagenet/tiny-imagenet-200/val/images/images"
 
 # Traverse the root directory
 for subdir in os.listdir(root_directory):

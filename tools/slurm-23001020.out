@@ -1,0 +1,32 @@
+['/cluster/home/abizeul/og_0_0.png']
+loade
+Starting
+tensor(2.4657) tensor(-2.1179)
+Batch 0 saved.
+/cluster/home/abizeul/mae/tools/intro_figure.py:226: DeprecationWarning: __array_wrap__ must accept context and return_scalar arguments (positionally) in the future. (Deprecated NumPy 2.0)
+  masked = torch.reshape(batch,[batch.shape[0],-1]) @ pc_mask @ pc_mask.T
+/cluster/home/abizeul/mae/tools/intro_figure.py:227: DeprecationWarning: __array_wrap__ must accept context and return_scalar arguments (positionally) in the future. (Deprecated NumPy 2.0)
+  unmasked = torch.reshape(batch,[batch.shape[0],-1]) @ pc_unmask @ pc_unmask.T
+tensor(0.7140) tensor(0.4060)
+tensor(0.7140) tensor(0.4060)
+Batch 0 saved.
+tensor(2.5703) tensor(-2.0357)
+Batch 0 saved.
+tensor(0.7140) tensor(0.4060)
+tensor(0.7140) tensor(0.4060)
+Batch 0 saved.
+tensor(2.5703) tensor(-2.0357)
+Batch 0 saved.
+tensor(0.7140) tensor(0.4060)
+tensor(0.7140) tensor(0.4060)
+Batch 0 saved.
+tensor(2.5180) tensor(-2.1179)
+Batch 0 saved.
+tensor(0.7140) tensor(0.4060)
+tensor(0.7140) tensor(0.4060)
+Batch 0 saved.
+tensor(2.5354) tensor(-2.1179)
+Batch 0 saved.
+tensor(0.7140) tensor(0.4060)
+tensor(0.7140) tensor(0.4060)
+Batch 0 saved.

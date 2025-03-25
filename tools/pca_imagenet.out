@@ -1,0 +1,4 @@
+NVIDIA-SMI has failed because it couldn't communicate with the NVIDIA driver. Make sure that the latest NVIDIA driver is installed and running.
+
+We are taking 512467
+slurmstepd: error: *** JOB 22193207 ON eu-fn-g2-05 CANCELLED AT 2025-01-30T18:35:15 ***
