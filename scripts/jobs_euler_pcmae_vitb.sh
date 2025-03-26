@@ -12,14 +12,15 @@ MEM_PER_CPU=2G
 MEM_PER_GPU=24G
 
 # DATASETs=(pcmae_cifar10_tvb pcmae_tiny_bvt pcmae_blood_bvt pcmae_path_bvt pcmae_derma_bvt)
-DATASETs=(pcmae_cifar10_kernel_pc)
-MASKs=(0.3)
+# DATASETs=(pcmae_cifar10_kernel_pc)
+DATASETs=(pcmae_tiny_pc)
+
+MASKs=(0.1 0.2 0.3 0.4)
 MODEL="vit-b"
 for DATASET in "${DATASETs[@]}"
 do
 for MASK in "${MASKs[@]}"
 do
-
 RUN_TAG=""$DATASET"_pc_pc_"$MASK"_model_"$MODEL"_lossA"
 NAME="/cluster/home/abizeul/mae/output_log/$RUN_TAG"
 JOB="/cluster/home/abizeul/miniconda3/envs/mae/bin/python main.py user=abizeul_euler experiment=$DATASET masking.pc_ratio=$MASK run_tag=$RUN_TAG model=$MODEL"

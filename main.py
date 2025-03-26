@@ -11,7 +11,7 @@ import torchvision.datasets
 from torchvision.datasets import CIFAR10
 import pytorch_lightning as pl
 import torch.nn.functional as F
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, Timer
 
 import os
 import logging
@@ -90,8 +90,9 @@ def main(config: DictConfig) -> None:
         filename='{epoch:02d}-{train_loss:.2f}',  # Filename format
         save_top_k=-1,  # Save all checkpoints
         save_weights_only=False,  # Save the full model (True for weights only)
-        every_n_epochs=50  # Save every epoch
+        every_n_epochs=config.save_every  # Save every epoch
     )
+    timer_callback =  Timer(duration="05:00:00:00")
 
     # Runing training (with eval on masked data to track behavior/convergence)
     trainer_configs = OmegaConf.to_container(config.trainer, resolve=True)
@@ -100,13 +101,13 @@ def main(config: DictConfig) -> None:
             logger=wandb_logger,
             enable_checkpointing = True,
             num_sanity_val_steps=0,
-            callbacks=[checkpoint_callback],
+            callbacks=[checkpoint_callback,timer_callback],
             check_val_every_n_epoch=config.pl_module.eval_freq,
         )
     print("------------------------- Start Training")
     trainer.fit(model_train, datamodule=datamodule)
     print("------------------------- End Training")
-
+    print("Time taken for training",timer.time_elapsed("train"))
 
     # Final evaluation: original data, no pixel or pc masking, MAE eval protocol
     eval_configs = OmegaConf.to_container(config.evaluator, resolve=True)

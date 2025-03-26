@@ -2,13 +2,13 @@ import os
 import shutil
 
 # Path to your text file
-txt_file_path = "/cluster/scratch/abizeul/tiny_imagenet/tiny-imagenet-200/val/val_annotations.txt"
+txt_file_path = "/cluster/scratch/abizeul/tiny-imagenet-200/val/val_annotations.txt"
 
 # Directory containing the images
-image_directory = "/cluster/scratch/abizeul/tiny_imagenet/tiny-imagenet-200/val/images"
+image_directory = "/cluster/scratch/abizeul/tiny-imagenet-200/val/images"
 
 # Directory where the images will be organized
-output_directory = "/cluster/scratch/abizeul/tiny_imagenet/tiny-imagenet-200/val_new"
+output_directory = "/cluster/scratch/abizeul/tiny-imagenet-200/val_new"
 
 # Create the output directory if it doesn't exist
 if not os.path.exists(output_directory):

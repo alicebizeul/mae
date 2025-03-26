@@ -37,3 +37,4 @@ hydra:
   sweep:
     dir: ${logs_dir}
 
+save_every: 50
