@@ -28,7 +28,7 @@ module_config:
   hidden_size: 768
   num_attention_heads: 12
   intermediate_size: 1536
-  norm_pix_loss: False
+  norm_pix_loss: ${masking.norm_pix_loss}
   attn_implementation: "eager"
   mask_ratio: ${masking.pixel_ratio}
   patch_size: ${data.patch_size}

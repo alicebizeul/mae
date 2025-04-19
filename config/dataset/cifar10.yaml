@@ -20,33 +20,33 @@ data:
     _target_: torch.tensor
     data: 
       _target_: numpy.load
-      file: ${datasets.train.root}/cifar-10-batches-py/mean_reshaped.npy
+      file: ${datasets.train.root}/mean_reshaped.npy
   std: 
     _target_: torch.tensor
     data: 
       _target_: numpy.load
-      file: ${datasets.train.root}/cifar-10-batches-py/std_reshaped.npy
+      file: ${datasets.train.root}/std_reshaped.npy
   classes: 10
   task: 1
 
 datasets:
   train:
     _target_: torchvision.datasets.CIFAR10
-    root: ${base_data_home}
+    root: ${base_data_home}/cifar10
     train: True
     download: ${download}
     transform: ${transformation.train}
 
   val:
     _target_: torchvision.datasets.CIFAR10
-    root: ${base_data_home}
+    root: ${base_data_home}/cifar10
     train: False
     download: ${download}
     transform: ${transformation.val}
 
   test:
     _target_: torchvision.datasets.CIFAR10
-    root: ${base_data_home}
+    root: ${base_data_home}/cifar10
     train: False
     download: ${download}
     transform: ${transformation.val}
@@ -74,9 +74,9 @@ datamodule_eval:
 extradata:
   pcamodule:
     _target_ : numpy.load
-    file: ${base_data_home}/cifar-10-batches-py/pc_matrix.npy
+    file: ${base_data_home}/cifar10/pc_matrix.npy
 
   eigenratiomodule:
     _target_: numpy.load
-    file: ${base_data_home}/cifar-10-batches-py/eigenvalues_ratio.npy
+    file: ${base_data_home}/cifar10/eigenvalues_ratio.npy
 

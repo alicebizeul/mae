@@ -13,13 +13,14 @@ MEM_PER_GPU=12G
 
 # DATASETs=(pcmae_cifar10_tvb pcmae_tiny_bvt pcmae_blood_bvt pcmae_path_bvt pcmae_derma_bvt)
 # DATASETs=(pcmae_cifar10_pc pcmae_tiny_pc pcmae_path_pc pcmae_derma_pc pcmae_blood_pc)
-DATASETs=(pcmae_imagenet_pc)
+# DATASETs=(pcmae_imagenet_pc)
+DATASETs=(pcmae_tiny_pc)
 
 MODEL="vit-b"
 # EPOCHs=(100 200 300 400 500 600 700 800)
-EPOCHs=(100)
+EPOCHs=(100 200 300 400 500 600 700 800)
 # MASKs=(0.05 0.1 0.2 0.3 0.4 0.5)
-MASKs=(0.3 0.4)
+MASKs=(0.1 0.2 0.3 0.4)
 
 for DATASET in "${DATASETs[@]}"
 do
@@ -52,13 +53,15 @@ fi
 
 RUN_TAG=""$DATASET"_pc_"$MASK"_eval_"$EPOCH"_model_"$MODEL"_lin"
 NAME="/cluster/home/abizeul/mae/output_log/$RUN_TAG"
+# JOB="/cluster/home/abizeul/miniconda3/envs/mae/bin/python main.py user=abizeul_euler experiment=$DATASET masking.pc_ratio=$MASK trainer=eval_lin checkpoint=pretrained model=$MODEL checkpoint.epoch=$EPOCH run_tag=$RUN_TAG datasets.train.root="/scratch/imagenet/train" datasets.val.root="/scratch/imagenet/val" datasets.test.root="/scratch/imagenet/val""
 JOB="/cluster/home/abizeul/miniconda3/envs/mae/bin/python main.py user=abizeul_euler experiment=$DATASET masking.pc_ratio=$MASK trainer=eval_lin checkpoint=pretrained model=$MODEL checkpoint.epoch=$EPOCH run_tag=$RUN_TAG"
-sbatch -o "$NAME" -n 1 --cpus-per-task "$NUM_WORKERS" --mem-per-cpu="$MEM_PER_CPU" --time="$TIME" -p gpu --gpus=1 --gres=gpumem:"$MEM_PER_GPU" --wrap="nvidia-smi;$JOB"
+# sbatch -o "$NAME" -n 1 --cpus-per-task "$NUM_WORKERS" --mem-per-cpu="$MEM_PER_CPU" --time="$TIME" -p gpu --gpus=1 --gres=gpumem:"$MEM_PER_GPU" --wrap="nvidia-smi; rsync -av --stats --no-perms --no-group /cluster/scratch/abizeul/imagenet.zip /scratch/; ls /scratch; unzip -o /scratch/imagenet.zip -d /scratch/; $JOB; rm -r /scratch/imagenet; rm /scratch/imagenet.zip"
+sbatch -o "$NAME" -n 1 --cpus-per-task "$NUM_WORKERS" --mem-per-cpu="$MEM_PER_CPU" --time="$TIME" -p gpu --gpus=1 --gres=gpumem:"$MEM_PER_GPU" --wrap="nvidia-smi; $JOB"
 
-RUN_TAG=""$DATASET"_pc_"$MASK"_eval_"$EPOCH"_model_"$MODEL"_mlp"
-NAME="/cluster/home/abizeul/mae/output_log/$RUN_TAG"
-JOB="/cluster/home/abizeul/miniconda3/envs/mae/bin/python main.py user=abizeul_euler  experiment=$DATASET masking.pc_ratio=$MASK trainer=eval_mlp checkpoint=pretrained model=$MODEL checkpoint.epoch=$EPOCH run_tag=$RUN_TAG"
-sbatch -o "$NAME" -n 1 --cpus-per-task "$NUM_WORKERS" --mem-per-cpu="$MEM_PER_CPU" --time="$TIME" -p gpu --gpus=1 --gres=gpumem:"$MEM_PER_GPU" --wrap="nvidia-smi;$JOB"
+# RUN_TAG=""$DATASET"_pc_"$MASK"_eval_"$EPOCH"_model_"$MODEL"_mlp"
+# NAME="/cluster/home/abizeul/mae/output_log/$RUN_TAG"
+# JOB="/cluster/home/abizeul/miniconda3/envs/mae/bin/python main.py user=abizeul_euler  experiment=$DATASET masking.pc_ratio=$MASK trainer=eval_mlp checkpoint=pretrained model=$MODEL checkpoint.epoch=$EPOCH run_tag=$RUN_TAG"
+# sbatch -o "$NAME" -n 1 --cpus-per-task "$NUM_WORKERS" --mem-per-cpu="$MEM_PER_CPU" --time="$TIME" -p gpu --gpus=1 --gres=gpumem:"$MEM_PER_GPU" --wrap="nvidia-smi;$JOB"
 
 
 # RUN_TAG=""$DATASET"_pc_"$MASK"_eval_"$EPOCH"_model_"$MODEL"_knn"

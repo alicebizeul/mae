@@ -7,4 +7,4 @@ masking:
   pixel_ratio: 0.0
   ratio:  ${decimal_2_percent:${masking.pc_ratio}}
   str_ratio: ${convert_str:${masking.ratio}}
-  norm_pix_loss: False
+  norm_pix_loss: True

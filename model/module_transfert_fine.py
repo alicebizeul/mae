@@ -78,8 +78,7 @@ class ViTMAE_transfert_fine(pl.LightningModule):
     def shared_step(self, batch: Tensor, stage: str = "train", batch_idx: int =None):
         if stage == "train":
             img, y, _ = batch
-            if len(y.shape)>1:
-                y = y[:,self.task]
+
             cls, _ = self.model(img,return_rep=True)
             logits = self.classifier(cls)
 
@@ -103,9 +102,6 @@ class ViTMAE_transfert_fine(pl.LightningModule):
 
         else:
             img, y = batch
-
-            if len(y.shape)>1:
-                y = y[:,self.task]
 
             cls, attentions = self.model(img,return_rep=True,output_attentions=True)
             logits = self.classifier(cls.detach())

@@ -32,7 +32,7 @@ data:
 datasets:
   train:
     _target_: medmnist.PathMNIST
-    root: ${base_data_home}/medmnist
+    root: ${base_data_home}/pathmnist
     split: train
     download: ${download}
     size: ${data.resolution}
@@ -40,7 +40,7 @@ datasets:
 
   val:
     _target_: medmnist.PathMNIST
-    root: ${base_data_home}/medmnist
+    root: ${base_data_home}/pathmnist
     split: val
     download: ${download}
     size: ${data.resolution}
@@ -48,7 +48,7 @@ datasets:
 
   test:
     _target_: medmnist.PathMNIST
-    root: ${base_data_home}/medmnist
+    root: ${base_data_home}/pathmnist
     split: val
     download: ${download}
     size: ${data.resolution}
@@ -76,8 +76,8 @@ datamodule_eval:
 extradata:
   pcamodule:
     _target_ : numpy.load
-    file: ${base_data_home}/medmnist/pathmnist_pc_matrix.npy
+    file: ${base_data_home}/pathmnist/pathmnist_pc_matrix.npy
 
   eigenratiomodule:
     _target_: numpy.load
-    file: ${base_data_home}/medmnist/pathmnist_eigenvalues_ratio.npy
+    file: ${base_data_home}/pathmnist/pathmnist_eigenvalues_ratio.npy

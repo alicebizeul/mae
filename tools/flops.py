@@ -1,3 +1,13 @@
+import sys
+sys.path.append("/cluster/home/abizeul/mae")
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from lightning.fabric.utilities.throughput import measure_flops
+from model.module import ViTMAE
+from dataset.dataloader import DataModule
+from model.vit_mae import ViTMAEForPreTraining
 import hydra
 from hydra.utils import instantiate
 from hydra.core.hydra_config import HydraConfig
@@ -53,10 +63,9 @@ OmegaConf.register_new_resolver("substract_one", lambda number: number-1)
 OmegaConf.register_new_resolver('to_tuple', lambda a, b, c: (a,b,c))
 OmegaConf.register_new_resolver('as_tuple', lambda *args: tuple(args))
 
-# Main function
-@hydra.main(version_base="1.2", config_path="config", config_name="train_defaults.yaml")
+@hydra.main(version_base="1.2", config_path="../config", config_name="train_defaults.yaml")
 def main(config: DictConfig) -> None:
-    
+
     # Setup 
     print_config(config)
     pl.seed_everything(config.seed)
@@ -76,68 +85,29 @@ def main(config: DictConfig) -> None:
     # Creating model
     vit_config = instantiate(config.module_config)
     vit = instantiate(config.module,vit_config)
-    model_train = instantiate(
+    model = instantiate(
         config.pl_module, 
         model=vit,
         datamodule = datamodule,
         save_dir=config.local_dir
         )
-    model_train = load_checkpoints(model_train, config.checkpoint_fn)
-
-    # Model checkpointing
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=config.checkpoint_dir,  # Directory where to save the checkpoints
-        filename='{epoch:02d}-{train_loss:.2f}',  # Filename format
-        save_top_k=-1,  # Save all checkpoints
-        save_weights_only=False,  # Save the full model (True for weights only)
-        every_n_epochs=config.save_every  # Save every epoch
-    )
-    timer_callback =  Timer(duration="05:00:00:00")
-
-    # Runing training (with eval on masked data to track behavior/convergence)
     trainer_configs = OmegaConf.to_container(config.trainer, resolve=True)
     trainer = pl.Trainer(
             **trainer_configs,
-            logger=wandb_logger,
-            enable_checkpointing = True,
-            num_sanity_val_steps=0,
-            callbacks=[checkpoint_callback,timer_callback],
-            check_val_every_n_epoch=config.pl_module.eval_freq,
         )
-    print("------------------------- Start Training")
-    trainer.fit(model_train, datamodule=datamodule, ckpt_path=config.checkpoint_fn.f if ((config.checkpoint is not None) and config.checkpoint.epoch<=config.trainer.max_epochs) else None)
-    print("------------------------- End Training")
-    print("Time taken for training",timer_callback.time_elapsed("train"))
 
-    # Final evaluation: original data, no pixel or pc masking, MAE eval protocol
-    eval_configs = OmegaConf.to_container(config.evaluator, resolve=True)
-    datamodule = instantiate(
-        config.datamodule_eval,
-        masking = {"type":"pixel","strategy":"pixel"},
-        data = config.datasets,
-    )
-    del trainer, vit
-    
-    for i in range(config.data.task):
-        model_eval = instantiate(
-            config=config.pl_module_eval,
-            model=model_train.model,
-            datamodule=datamodule,
-            save_dir=config.local_dir,
-            task=i
-        )
-        evaluator = pl.Trainer(
-                **eval_configs,
-                logger=wandb_logger,
-                enable_checkpointing = False,
-                num_sanity_val_steps=0,
-                check_val_every_n_epoch=1
-            )
-        print(f"------------------------- Start Evaluation: lin probe for task {i}")
-        evaluator.fit(model_eval, datamodule=datamodule)
-        print(f"------------------------- End Evaluation: lin probe for task {i}")
+    # Create dummy data (make sure it matches your model's expected input shape)
+    nb_pc = 1000
+    dummy_input = [torch.randn(1,config.data.channels,config.data.resolution,config.data.resolution),torch.randint(low=0,high=9,size=[1]),torch.randint(low=0,high=10000,size=[nb_pc])]   # for example, batch size 32, 784 features
+
+    # Measure FLOPs by running the training_step function multiple times
+    # 'iterations' sets the number of runs to average over.
+    training_step = lambda: model.training_step(dummy_input,1)
+    loss_fn = lambda x: x
+    flops = measure_flops(model,training_step,loss_fn)
+    print("Estimated FLOPs per training step:", flops)
+
 
 
 if __name__ == "__main__":
     main()
-

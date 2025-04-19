@@ -29,9 +29,9 @@ class PairedDataset(Dataset):
         if self.is_pc_mask:
             assert "eigenratiomodule" in extra_data and "pcamodule" in extra_data
             self.eigenvalues = np.array(extra_data['eigenratiomodule'])
-            self.cum_eigenvalues = np.cumsum(self.eigenvalues)
+            # self.cum_eigenvalues = np.cumsum(self.eigenvalues)
             self.pc_mask = None
-            self.find_threshold = lambda eigenvalues ,ratio: np.argmin(np.abs(np.cumsum(eigenvalues) - ratio))
+            self.find_threshold = lambda eigenvalues, ratio: np.argmin(np.abs(np.cumsum(eigenvalues) - ratio))
             self.get_pcs_index  = np.arange
         else:
             self.pc_mask = 0
@@ -45,9 +45,6 @@ class PairedDataset(Dataset):
         img, y = self.dataset[idx]
         pc_mask = self.pc_mask
 
-        if isinstance(y, list) and len(y) == 2:
-            y, pc_mask = y
-
         if self.masking.type == "pc":
 
             if self.masking.strategy == "sampling_pc":
@@ -56,7 +53,7 @@ class PairedDataset(Dataset):
                 threshold = self.find_threshold(self.eigenvalues[index],pc_ratio)
                 pc_mask = index[:threshold]
 
-            elif self.masking.strategy == "pc_1" or self.masking.strategy == "pc_2":
+            elif self.masking.strategy == "pc":
                 index = np.random.permutation(self.eigenvalues.shape[0])
                 threshold = self.find_threshold(self.eigenvalues[index],self.masking.pc_ratio)
                 pc_mask = index[:threshold]
@@ -110,9 +107,16 @@ class DataModule(pl.LightningDataModule):
 
         imgs, labels, pc_masks = zip(*batch)
 
-        imgs = torch.stack(imgs) 
-        labels = torch.tensor(labels) 
-        pc_masks = torch.tensor(pc_masks[0])
+        imgs     = torch.stack(imgs) 
+        labels   = torch.tensor(labels) 
+
+        index, flag = 0, 0
+        while flag==0:
+            if pc_masks[index].shape[0] >0:
+                flag=1
+                pc_masks = torch.tensor(pc_masks[index])
+            else: index += 1
+
         return imgs, labels, pc_masks
 
     def train_dataloader(self) -> DataLoader:

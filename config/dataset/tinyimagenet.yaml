@@ -20,29 +20,29 @@ data:
     _target_: torch.tensor
     data: 
       _target_: numpy.load
-      file: ${datasets.train.root}/mean_reshaped.npy
+      file: ${base_data_home}/tinyimagenet/mean_reshaped.npy
   std: 
     _target_: torch.tensor
     data: 
       _target_: numpy.load
-      file: ${datasets.train.root}/std_reshaped.npy
+      file: ${base_data_home}/tinyimagenet/std_reshaped.npy
   classes: 200
   task: 1
 
 datasets:
   train:
     _target_: torchvision.datasets.ImageFolder
-    root: ${base_data_home}/tiny-imagenet-200/train
+    root: ${base_data_home}/tinyimagenet/tiny-imagenet-200/train
     transform: ${transformation.train}
 
   val:
     _target_: torchvision.datasets.ImageFolder
-    root: ${base_data_home}/tiny-imagenet-200/val
+    root: ${base_data_home}/tinyimagenet/tiny-imagenet-200/val
     transform: ${transformation.val}
 
   test:
     _target_: torchvision.datasets.ImageFolder
-    root: ${base_data_home}/tiny-imagenet-200/val
+    root: ${base_data_home}/tinyimagenet/tiny-imagenet-200/val
     transform: ${transformation.val}
 
 datamodule: 
@@ -67,8 +67,8 @@ datamodule_eval:
 extradata:
   pcamodule:
     _target_ : numpy.load
-    file: ${base_data_home}/tiny-imagenet-200/train/pc_matrix.npy
+    file: ${base_data_home}/tinyimagenet/pc_matrix.npy
 
   eigenratiomodule:
     _target_: numpy.load
-    file: ${base_data_home}/tiny-imagenet-200/train/eigenvalues_ratio.npy
+    file: ${base_data_home}/tinyimagenet/eigenvalues_ratio.npy

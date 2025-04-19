@@ -59,9 +59,9 @@ class ViTMAE(pl.LightningModule):
             self.register_buffer("masking_fn_",torch.Tensor(self.datamodule.extra_data.pcamodule.T))
             self.indexes = torch.arange(self.masking_fn_.shape[1])
 
-
         elif self.masking.type == "random":
             self.register_buffer("masking_fn",nn.Linear())
+            
         elif self.masking.type == "segmentation":
             patch_size = self.model.config.patch_size
             self.mask_patch_pool = torch.nn.MaxPool2d(
@@ -95,15 +95,13 @@ class ViTMAE(pl.LightningModule):
             img, y, pc_mask = batch
 
             if self.masking.type == "pc":
-                # target  = (img.reshape([img.shape[0],-1]) @ self.masking_fn_[:,pc_mask])
+                target  = (img.reshape([img.shape[0],-1]) @ self.masking_fn_[:,pc_mask])
 
                 if self.masking.strategy in ["sampling_pc","pc"]:
                     indexes = self.indexes.to(self.device)
                     pc_mask_input = indexes[~torch.isin(indexes,pc_mask)]
 
-                img     = img.reshape([img.shape[0],-1]) @ self.masking_fn_ #@ self.masking_fn_[:,pc_mask_input].T).reshape(img.shape)
-                target  = img[:,pc_mask]
-
+                img     = ((img.reshape([img.shape[0],-1]) @ self.masking_fn_[:,pc_mask_input])@ self.masking_fn_[:,pc_mask_input].T).reshape(img.shape)
 
             elif self.masking.type == "pixel":
                 if self.masking.strategy == "sampling":
@@ -121,7 +119,7 @@ class ViTMAE(pl.LightningModule):
                 outputs.mask = torch.zeros_like(mask.reshape([mask.shape[0],-1]),device=self.device)
 
             loss_mae = self.model.forward_loss(target,outputs.logits,outputs.mask,patchify=False if self.masking.type == "pc" else True)
-
+            print("This is my loss",loss_mae)
             if (self.current_epoch+1)%self.eval_freq==0 and batch_idx==0:
                 self.log(
                     f"{stage}_mae_loss", 

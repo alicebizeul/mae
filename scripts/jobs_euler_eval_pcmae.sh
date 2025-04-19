@@ -7,7 +7,7 @@ conda activate mae
 cd /cluster/home/abizeul/mae
 
 NUM_WORKERS=8
-TIME=4:00:00
+TIME=48:00:00
 MEM_PER_CPU=2G
 MEM_PER_GPU=12G
 # Be carefull at epochs, workers and batch size
@@ -17,9 +17,9 @@ DATASETs=(pcmae_cifar10_pc) # pcmae_derma_pc pcmae_path_pc pcmae_cifar10_pc pcma
 # DATASETs=( pcmae_cifar10_pc)
 
 # MASKs=(0.05 0.1 0.2 0.3 0.4 0.5)
-MASKs=( 0.3)
-# EPOCHs=(100 200 300 400 500 600 700 800)
+MASKs=(0.1 0.2 0.3 0.4 0.5)
 EPOCHs=(800)
+# EPOCHs=(800)
 
 for DATASET in "${DATASETs[@]}"
 do
@@ -57,7 +57,6 @@ sbatch -o "$NAME" -n 1 --cpus-per-task "$NUM_WORKERS" --mem-per-cpu="$MEM_PER_CP
 # JOB="/cluster/home/abizeul/miniconda3/envs/mae/bin/python main.py user=abizeul_euler experiment=$DATASET masking.pc_ratio=$MASK trainer=eval_transfert checkpoint=pretrained checkpoint.epoch=$EPOCH run_tag=$RUN_TAG"
 # sbatch -o "$NAME" -n 1 --cpus-per-task "$NUM_WORKERS" --mem-per-cpu="$MEM_PER_CPU" --time="$TIME" -p gpu --gpus=1 --gres=gpumem:"$MEM_PER_GPU" --wrap="nvidia-smi;$JOB"
 
-
 # RUN_TAG=""$DATASET"_pc_"$MASK"_eval_"$EPOCH"_mlp"
 # NAME="/cluster/home/abizeul/mae/output_log/$RUN_TAG"
 # JOB="/cluster/home/abizeul/miniconda3/envs/mae/bin/python main.py user=abizeul_euler experiment=$DATASET masking.pc_ratio=$MASK trainer=eval_mlp checkpoint=pretrained checkpoint.epoch=$EPOCH run_tag=$RUN_TAG"
@@ -72,7 +71,6 @@ sbatch -o "$NAME" -n 1 --cpus-per-task "$NUM_WORKERS" --mem-per-cpu="$MEM_PER_CP
 # NAME="/cluster/home/abizeul/mae/output_log/$RUN_TAG"
 # JOB="/cluster/home/abizeul/miniconda3/envs/mae/bin/python main.py user=abizeul_euler experiment=$DATASET masking.pc_ratio=$MASK trainer=eval_transfert_fine checkpoint=pretrained checkpoint.epoch=$EPOCH run_tag=$RUN_TAG"
 # sbatch -o "$NAME" -n 1 --cpus-per-task "$NUM_WORKERS" --mem-per-cpu="$MEM_PER_CPU" --time="$TIME" -p gpu --gpus=1 --gres=gpumem:"$MEM_PER_GPU" --wrap="nvidia-smi;$JOB"
-
 
 # RUN_TAG=""$DATASET"_pc_"$MASK"_eval_"$EPOCH"_knn"
 # NAME="/cluster/home/abizeul/mae/output_log/$RUN_TAG"

@@ -55,6 +55,7 @@ class ViTMAE_lin(pl.LightningModule):
 
         self.online_classifier_loss = eval_fn
         self.online_logit_fn= eval_logit_fn
+
         self.online_train_accuracy = torchmetrics.Accuracy(
                     task=eval_type, num_classes=self.num_classes, top_k=1
         )
@@ -77,24 +78,27 @@ class ViTMAE_lin(pl.LightningModule):
     def shared_step(self, batch: Tensor, stage: str = "train", batch_idx: int =None):
         if stage == "train":
             img, y, _ = batch
-            if len(y.shape)>1:
-                y = y[:,self.task]
-            cls, _ = self.model(img,return_rep=True)
+
+            with torch.no_grad():
+                cls, _ = self.model(img,return_rep=True)
             logits = self.classifier(cls.detach())
 
             loss_ce = self.online_classifier_loss(logits.squeeze(),y.squeeze())
-            self.log(f"final_{stage}_classifier_loss_{self.evaluated_epoch}_lin", loss_ce, sync_dist=True)
-
-            accuracy_metric = getattr(self, f"online_{stage}_accuracy")
-            accuracy_metric(self.online_logit_fn(logits.squeeze()), y.squeeze())
-            self.log(
-                f"final_{stage}_accuracy_{self.evaluated_epoch}_lin",
-                accuracy_metric,
-                prog_bar=False,
-                sync_dist=True,
-            )
 
             if (self.current_epoch+1)%10==0 and batch_idx==0:
+
+                accuracy_metric = getattr(self, f"online_{stage}_accuracy")
+                accuracy_metric(self.online_logit_fn(logits.squeeze()), y.squeeze())
+
+                self.log(f"final_{stage}_classifier_loss_{self.evaluated_epoch}_lin", loss_ce, sync_dist=True)
+
+                self.log(
+                    f"final_{stage}_accuracy_{self.evaluated_epoch}_lin",
+                    accuracy_metric,
+                    prog_bar=False,
+                    sync_dist=True,
+                )
+
                 self.train_losses.append(loss_ce.item())
                 self.avg_train_losses.append(np.mean(self.train_losses))
                 plot_loss(self.avg_train_losses,name_loss="X-Entropy",save_dir=self.save_dir,name_file=f"_eval_train_{self.evaluated_epoch}_lin")
@@ -103,46 +107,35 @@ class ViTMAE_lin(pl.LightningModule):
         else:
             img, y = batch
 
-            if len(y.shape)>1:
-                y = y[:,self.task]
-
             cls, attentions = self.model(img,return_rep=True,output_attentions=True)
             logits = self.classifier(cls.detach())
 
-            accuracy_metric = getattr(self, f"online_{stage}_accuracy")
-            accuracy_metric(self.online_logit_fn(logits.squeeze()), y.squeeze())
-            self.log(
-                f"final_{stage}_accuracy_{self.evaluated_epoch}_lin",
-                accuracy_metric,
-                prog_bar=True,
-                sync_dist=True,
-                on_epoch=True,
-                on_step=False,
-            )
-
             if batch_idx == 0 and (self.current_epoch+1) not in list(self.performance.keys()): 
+                
+                accuracy_metric = getattr(self, f"online_{stage}_accuracy")
+                accuracy_metric(self.online_logit_fn(logits.squeeze()), y.squeeze())
+
+                self.log(
+                    f"final_{stage}_accuracy_{self.evaluated_epoch}_lin",
+                    accuracy_metric,
+                    prog_bar=True,
+                    sync_dist=True,
+                    on_epoch=True,
+                    on_step=False,
+                )
+
                 self.performance[self.current_epoch+1]=[]
-                if len(y.squeeze().shape) >1:
-                    self.f1scores[self.current_epoch+1]=[]
+                # if len(y.squeeze().shape) >1:
+                #     self.f1scores[self.current_epoch+1]=[]
 
-            if len(y.squeeze().shape) > 1:
-                f1_metric = getattr(self, f"online_{stage}_f1")
-                f1_score = f1_metric(self.online_logit_fn(logits.squeeze()), y.squeeze())
-                self.performance[self.current_epoch+1].append(sum(1*((self.online_logit_fn(logits.squeeze())>0.5)==y.squeeze())).detach().cpu().numpy())  
-                self.f1scores[self.current_epoch+1].append(f1_score.detach().cpu().numpy())  
+            # if len(y.squeeze().shape) > 1:
+            #     f1_metric = getattr(self, f"online_{stage}_f1")
+            #     f1_score = f1_metric(self.online_logit_fn(logits.squeeze()), y.squeeze())
+            #     self.performance[self.current_epoch+1].append(sum(1*((self.online_logit_fn(logits.squeeze())>0.5)==y.squeeze())).detach().cpu().numpy())  
+            #     self.f1scores[self.current_epoch+1].append(f1_score.detach().cpu().numpy())  
 
-            else:
+            # else:
                 self.performance[self.current_epoch+1].append(sum(1*(torch.argmax(logits.squeeze(), dim=-1)==y.squeeze())).item())  
-
-            # check the attention we get at final
-            # if self.current_epoch==0 and batch_idx==0:
-            #     attentions = attentions[-1].mean(1)
-            #     att_map_cls = attentions[:,0,1:]
-            #     att_map_spatial = torch.mean(attentions[:,1:,1:],dim=-1)
-            #     att_map_cls = att_map_cls.reshape([img.shape[0],int(np.sqrt(att_map_cls.shape[-1])),int(np.sqrt(att_map_cls.shape[-1]))])
-            #     att_map_spatial = att_map_spatial.reshape([img.shape[0],int(np.sqrt(att_map_spatial.shape[-1])),int(np.sqrt(att_map_spatial.shape[-1]))])
-            #     save_attention_maps(img[:10],att_map_cls[:10].unsqueeze(1),att_map_spatial[:10].unsqueeze(1),self.current_epoch+1, self.save_dir,f"eval_{self.evaluated_epoch}_lin")
-            #     save_attention_maps_batch(att_map_cls=att_map_cls,att_map_spatial=att_map_spatial,epoch=self.current_epoch+1, output_dir=self.save_dir,name=f"eval_{self.evaluated_epoch}_lin")
 
             return None    
 

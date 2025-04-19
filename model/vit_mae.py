@@ -1,18 +1,18 @@
-
 import torch
 from transformers import ViTMAEConfig, ViTMAEPreTrainedModel, ViTMAEModel
 from transformers.models.vit_mae.modeling_vit_mae import  ViTMAEDecoder, ViTMAEForPreTrainingOutput
 from typing import Optional, Set, Tuple, Union
-from vit_embedding import ViTMAEmbeddings
+
 
 class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.config = config
 
-        self.vit = ViTMAEModel(config) 
-        self.vit.embedings = ViTMAEEmbeddings(config)
+        self.vit = ViTMAEModel(config) # self.vit.embeddings.config
         self.decoder = ViTMAEDecoder(config, num_patches=self.vit.embeddings.num_patches)
+
+        # Initialize weights and apply final processing
         self.post_init()
 
     def get_input_embeddings(self):
@@ -43,12 +43,11 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
                 Patchified pixel values.
         """
         patch_size, num_channels = self.config.patch_size, self.config.num_channels
-
+        # sanity checks
         if not interpolate_pos_encoding and (
             pixel_values.shape[2] != pixel_values.shape[3] or pixel_values.shape[2] % patch_size != 0
         ):
             raise ValueError("Make sure the pixel values have a squared size that is divisible by the patch size")
-        
         if pixel_values.shape[1] != num_channels:
             raise ValueError(
                 "Make sure the number of channels of the pixel values is equal to the one set in the configuration"
@@ -58,7 +57,6 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
         batch_size = pixel_values.shape[0]
         num_patches_h = pixel_values.shape[2] // patch_size
         num_patches_w = pixel_values.shape[3] // patch_size
-
         patchified_pixel_values = pixel_values.reshape(
             batch_size, num_channels, num_patches_h, patch_size, num_patches_w, patch_size
         )
@@ -133,7 +131,7 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
             target = self.patchify(pixel_values, interpolate_pos_encoding=interpolate_pos_encoding)
         else: 
             target = pixel_values
-
+            
         if self.config.norm_pix_loss:
             mean = target.mean(dim=-1, keepdim=True)
             var = target.var(dim=-1, keepdim=True)
@@ -142,10 +140,10 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
         loss = (pred - target) ** 2
         loss = loss.mean(dim=-1)  # [N, L], mean loss per patch
 
-        # if mask.sum() > 0:
-        #     loss = (loss * mask).sum() / mask.sum()  # mean loss on removed patches
-        # else:
-        #     loss = loss.mean()
+        if mask.sum() > 0:
+            loss = (loss * mask).sum() / mask.sum()  # mean loss on removed patches
+        else:
+            loss = loss.mean()
 
         return loss
 
@@ -198,11 +196,16 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
         ids_restore = outputs.ids_restore
         mask = outputs.mask
 
+        # Mask out encoder embeddings that correspond to padded tokens
+        if head_mask is not None:
+            head_mask_per_token = head_mask[0,:,0,0][...,None]
+            latent = head_mask_per_token*latent
+
         if return_rep:
             return latent[:,0,:], outputs.attentions
         else:
             decoder_outputs = self.decoder(latent, ids_restore, interpolate_pos_encoding=interpolate_pos_encoding)
-            logits = decoder_outputs.logits 
+            logits = decoder_outputs.logits  # shape (batch_size, num_patches, patch_size*patch_size*num_channels)
 
             return ViTMAEForPreTrainingOutput(
                 loss=0,
